@@ -1,0 +1,3 @@
+target: ifid.vae.dino.DINOFlowVAE
+params:
+  ckpt_path: ${oc.env:DINOFLOWVAE_CKPT,./assets/checkpoints/dinoflowvae.pt}

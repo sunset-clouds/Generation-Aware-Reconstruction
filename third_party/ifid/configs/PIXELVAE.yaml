@@ -1,0 +1,3 @@
+target: ifid.vae.pixel_sit_vae.PixelSiTVAE
+params:
+  ckpt_file: ${oc.env:PIXELVAE_CKPT,./assets/checkpoints/pixelvae.pt}

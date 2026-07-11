@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Logs and experiment outputs
+logs/
+wandb/
+results/
+saver/
+reconstruction/
+*.log
+slurm-*.out
+
+# Local assets, datasets, and checkpoints
+assets/checkpoints/
+assets/generated/
+assets/stage2_assets/
+checkpoints/
+/data/
+datasets/
+imagenet/
+ImageNet/
+
+# Large generated or pretrained files
+*.pt
+*.pth
+*.pth.tar
+*.ckpt
+*.safetensors
+*.npz
+*.npy
+*.pb
+*.h5
+*.tar
+*.tar.gz
+*.zip
+
+# macOS/editor noise
+.DS_Store
+.idea/
+.vscode/

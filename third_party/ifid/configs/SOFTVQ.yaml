@@ -1,0 +1,3 @@
+target: ifid.vae.cont.SOFTVQ
+params:
+  hf_repo: ${oc.env:SOFTVQ_HF_REPO,SoftVQVAE/softvq-l-64}

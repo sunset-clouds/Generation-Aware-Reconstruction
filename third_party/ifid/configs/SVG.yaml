@@ -1,0 +1,24 @@
+target: ifid.vae.svg.SVGEXPORT
+params:
+  ckpt_path: ${oc.env:SVG_CKPT,./assets/checkpoints/svg_autoencoder.ckpt}
+  embed_dim: 32
+  ddconfig:
+    double_z: true
+    z_channels: 392
+    resolution: 256
+    in_channels: 3
+    out_ch: 3
+    ch: 128
+    ch_mult: [1,1,2,2,4]
+    num_res_blocks: 2
+    attn_resolutions:
+    - 16
+    dropout: 0.0
+  dinoconfig:
+    dinov3_location: ${oc.env:DINOV3_ROOT,./third_party/dinov3}
+    model_name: dinov3_vits16plus
+    weights: ${oc.env:DINOV3_WEIGHTS,./assets/checkpoints/dinov3_vits16plus.pth}
+  extra_vit_config:
+    output_dim: 8
+    mask_ratio: 0.1
+    use_outnorm: true
