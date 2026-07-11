@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Generation-aware reconstruction aligns reconstruction evaluation and decoder optimization with the latent distributions encountered during generation.">
+  <title>Aligning Reconstruction with Generation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero" id="top">
+    <nav class="nav shell" aria-label="Primary navigation">
+      <a class="wordmark" href="#top" aria-label="GAR home"><span>G</span>AR</a>
+      <div class="nav-links">
+        <a href="#idea">Idea</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#bibtex">BibTeX</a>
+      </div>
+    </nav>
+
+    <div class="hero-content shell">
+      <p class="eyebrow">Generation-Aware Reconstruction</p>
+      <h1>Aligning Reconstruction<br>with <em>Generation</em></h1>
+      <p class="subtitle">A Latent Distribution Alignment Perspective on Evaluation and Optimization</p>
+
+      <div class="authors" aria-label="Authors and affiliations">
+        <a href="https://sunset-clouds.github.io/" target="_blank" rel="noreferrer">Xianghong Fang<sup>1,*</sup></a>
+        <span>Wenjie Shu<sup>1,*</sup></span>
+        <span>Tongda Xu<sup>2</sup></span>
+        <span>Wenlong Mou<sup>1</sup></span>
+        <span>Dehan Kong<sup>1</sup></span>
+        <span>Tim G. J. Rudner<sup>1,3</sup></span>
+      </div>
+      <div class="affiliations">
+        <span><sup>1</sup> University of Toronto</span>
+        <span><sup>2</sup> Independent</span>
+        <span><sup>3</sup> Vijil</span>
+        <span><sup>*</sup> Equal contribution</span>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-primary" href="assets/GAR_paper.pdf" target="_blank">Read paper <span aria-hidden="true">↗</span></a>
+        <a class="button" href="https://github.com/sunset-clouds/Generation-Aware-Reconstruction" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+    <div class="hero-mark" aria-hidden="true">P<sub>e</sub> → P<sub>g</sub></div>
+  </header>
+
+  <main>
+    <section class="lede shell section" id="idea">
+      <div class="section-label">The question</div>
+      <div class="lede-copy">
+        <div class="callout">Why can a model reconstruct images well, yet generate them poorly?</div>
+        <p class="pivot">In our paper, we show that reconstruction and generation test the decoder on different latent distributions. Generation-aware reconstruction closes this evaluation gap.</p>
+      </div>
+    </section>
+
+    <section class="shell figure-section">
+      <p class="setup">Standard reconstruction decodes encoder latents, while generation decodes latents produced by a generative model. The distinction changes what the decoder sees and what reconstruction metrics can predict.</p>
+      <figure class="figure figure-wide">
+        <img src="assets/Figure1.png" alt="Four-panel overview comparing standard reconstruction, generation, latent distributions, and correlations between reconstruction metrics and generative performance.">
+        <figcaption><span>Figure 1.</span> <strong>Generation-aware reconstruction resolves the reconstruction–generation mismatch.</strong> (a) Standard reconstruction decodes encoder latents <i>z</i><sub>e</sub> ∼ P<sub>e</sub>, while generation decodes generative latents <i>z</i><sub>g</sub> ∼ P<sub>g</sub>. (b) Intermediate distributions P<sub>g</sub><sup>t</sup> bridge P<sub>e</sub> and P<sub>g</sub>. (c) rFID poorly correlates with gFID, with Spearman ρ = −0.34. (d) GAR-FID evaluates intermediate latents <i>z</i><sub>g</sub><sup>t</sup> and reaches ρ = 0.99 at η<sub>t</sub> = 0.8.</figcaption>
+      </figure>
+      <p class="readout">The mismatch explains the reconstruction–generation dilemma. rFID measures decoder behavior under P<sub>e</sub>, but gFID depends on behavior under P<sub>g</sub>. GAR follows the distributions encountered along the generative trajectory.</p>
+    </section>
+
+    <section class="band" id="method">
+      <div class="shell section">
+        <div class="section-label">The method</div>
+        <div class="section-body">
+          <h2>Reconstruction, made generation-aware</h2>
+          <p class="section-intro">GAR adds one controlled noise–denoise step between encoding and decoding. This simple change moves evaluation from encoder latents toward generation-consistent intermediate latents.</p>
+
+          <div class="steps" aria-label="GAR pipeline steps">
+            <div><b>01</b><span>Encode</span><p>Map an input image <i>x</i> to <i>z</i><sub>e</sub> ∼ P<sub>e</sub>.</p></div>
+            <div><b>02</b><span>Perturb</span><p>Add noise at level η<sub>t</sub> using the model’s forward process.</p></div>
+            <div><b>03</b><span>Denoise</span><p>Use the frozen generative model to obtain <i>z</i><sub>g</sub><sup>t</sup>.</p></div>
+            <div><b>04</b><span>Decode</span><p>Evaluate the decoder on P<sub>g</sub><sup>t</sup> with GAR-FID.</p></div>
+          </div>
+
+          <p class="setup">The pipeline preserves a paired reconstruction protocol while changing the latent distribution supplied to the decoder.</p>
+          <figure class="figure figure-medium">
+            <img src="assets/GAR_pipeline.png" alt="GAR pipeline with encoder, noise injection, generative model, and decoder.">
+            <figcaption><span>Figure 2.</span> Illustration of the GAR pipeline.</figcaption>
+          </figure>
+          <p class="readout">At η<sub>t</sub> = 0, GAR reduces to standard reconstruction. Increasing η<sub>t</sub> shifts the decoded latent toward P<sub>g</sub>, which turns the noise level into a direct probe of decoder behavior along generation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="shell section distribution">
+      <div class="section-label">Distributional gap</div>
+      <div class="section-body">
+        <h2>A trajectory through latent space</h2>
+        <p>Latent-FD measures the high-dimensional Fréchet distance between latent distributions. For SD-VAE with iMF, stronger generators produce latents closer to the encoder distribution: Latent-FD drops from <strong>103.64</strong> for iMF-B/2 to <strong>91.55</strong> for iMF-XL/2. The corresponding gFID without CFG falls from <strong>16.41</strong> to <strong>9.41</strong>.</p>
+
+        <div class="metric-row" aria-label="Distributional gap summary">
+          <div><span>103.64 → 91.55</span><small>Latent-FD, B/2 to XL/2</small></div>
+          <div><span>16.41 → 9.41</span><small>gFID without CFG</small></div>
+          <div><span>0.999</span><small>LDA AUC at decoder Up Block 0</small></div>
+        </div>
+
+        <p class="setup">Tracking both endpoints across noise levels reveals how GAR traverses the gap rather than sampling an unrelated perturbation.</p>
+        <figure class="figure figure-small">
+          <img src="assets/Latent-FD.png" alt="Latent-FD curves across GAR noise levels, comparing intermediate latents with encoder and generative distributions.">
+          <figcaption><span>Figure 3.</span> Latent-FD between P<sub>g</sub><sup>t</sup> and P<sub>e</sub>, and between P<sub>g</sub><sup>t</sup> and P<sub>g</sub> across noise levels, showing progressive divergence from P<sub>e</sub> and alignment with P<sub>g</sub>.</figcaption>
+        </figure>
+        <p class="readout">As noise increases, P<sub>g</sub><sup>t</sup> moves away from P<sub>e</sub> and approaches P<sub>g</sub>. Small differences also grow through the decoder, culminating in near-complete LDA separation at its first upsampling block.</p>
+      </div>
+    </section>
+
+    <section class="band results-band" id="results">
+      <div class="shell section">
+        <div class="section-label">Experimental results</div>
+        <div class="section-body">
+          <h2>Does GAR-FID predict generation?</h2>
+          <p class="section-intro">We compare 13 pretrained VAEs with SiT-B and SiT-XL generators. Correlation rises consistently as GAR moves toward the generative distribution, while rFID remains negatively correlated with gFID.</p>
+
+          <div class="table-card">
+            <div class="table-title"><span>Table 1</span><p>Correlation with gFID across tokenizers and generator scales</p></div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th rowspan="2">Metric</th><th colspan="2">SiT-B, no CFG</th><th colspan="2">SiT-XL, no CFG</th><th colspan="2">Mixed, no CFG</th></tr>
+                  <tr><th>PCC ↑</th><th>SRCC ↑</th><th>PCC ↑</th><th>SRCC ↑</th><th>PCC ↑</th><th>SRCC ↑</th></tr>
+                </thead>
+                <tbody>
+                  <tr><th>rFID, reproduced</th><td>−0.11</td><td>−0.36</td><td>−0.13</td><td>−0.34</td><td>−0.10</td><td>−0.30</td></tr>
+                  <tr><th>iFID, reproduced</th><td>0.86</td><td>0.83</td><td>0.90</td><td>0.88</td><td>0.72</td><td>0.77</td></tr>
+                  <tr><th>GAR-FID, η<sub>t</sub> = 0.6</th><td>0.81</td><td>0.79</td><td>0.79</td><td>0.84</td><td>0.86</td><td>0.89</td></tr>
+                  <tr><th>GAR-FID, η<sub>t</sub> = 0.7</th><td>0.93</td><td>0.90</td><td>0.91</td><td>0.90</td><td>0.95</td><td>0.96</td></tr>
+                  <tr class="highlight"><th>GAR-FID, η<sub>t</sub> = 0.8</th><td>0.98</td><td>0.96</td><td>0.98</td><td>0.99</td><td>0.99</td><td>0.99</td></tr>
+                  <tr><th>GAR-FID, η<sub>t</sub> = 0.9</th><td>1.00</td><td>0.99</td><td>1.00</td><td>1.00</td><td>1.00</td><td>1.00</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="table-note">Selected no-CFG columns from the paper’s Table 1. PCC is Pearson correlation; SRCC is Spearman rank correlation. Higher is better.</p>
+          </div>
+
+          <p class="result-summary">At η<sub>t</sub> = 0.8, GAR-FID reaches <strong>0.99 SRCC</strong> with gFID for both SiT-XL and the mixed-generator setting. The mixed setting also tests whether the metric survives joint changes in tokenizer and generator capacity.</p>
+
+          <h2 class="sub-result">Can alignment improve the generator?</h2>
+          <p>Decoder adaptation freezes the encoder and generative model, then fine-tunes only the decoder on intermediate generative latents. It changes no model size or inference cost.</p>
+
+          <div class="table-card">
+            <div class="table-title"><span>Table 2</span><p>gFID before and after decoder adaptation, OpenAI protocol</p></div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Setting</th><th>iMF-B/2</th><th>iMF-M/2</th><th>iMF-L/2</th><th>iMF-XL/2</th></tr></thead>
+                <tbody>
+                  <tr class="group"><th colspan="5">gFID without CFG ↓</th></tr>
+                  <tr><th>Without DA</th><td>16.41</td><td>11.92</td><td>9.26</td><td>9.41</td></tr>
+                  <tr class="highlight"><th>With DA</th><td>12.41 <small>↓4.00</small></td><td>9.66 <small>↓2.26</small></td><td>7.41 <small>↓1.85</small></td><td>7.61 <small>↓1.80</small></td></tr>
+                  <tr class="group"><th colspan="5">gFID with CFG ↓</th></tr>
+                  <tr><th>Without DA</th><td>3.47</td><td>2.40</td><td>1.90</td><td>1.80</td></tr>
+                  <tr class="highlight"><th>With DA</th><td>3.12 <small>↓0.35</small></td><td>2.30 <small>↓0.10</small></td><td>1.80 <small>↓0.10</small></td><td>1.73 <small>↓0.07</small></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="table-note">Results from the paper’s Table 2 using the OpenAI evaluation protocol. DA improves every model scale, with the largest absolute gain on iMF-B/2 without CFG.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="shell section collapse">
+      <div class="section-label">What changes with noise?</div>
+      <div class="section-body">
+        <h2>Where does structural fidelity break?</h2>
+        <p class="setup">GAR is a trajectory, not a binary test. Its reconstructions reveal how the input structure changes as the evaluation distribution approaches P<sub>g</sub>.</p>
+        <figure class="figure figure-wide">
+          <img src="assets/GAR_examples.png" alt="Rows of GAR reconstructions at increasing noise levels, showing progressive structural collapse.">
+          <figcaption><span>Figure 4.</span> Illustration of <i>structural collapse</i> under increasing noise levels in GAR reconstruction. Each row shows an input followed by reconstructions at η<sub>t</sub> ∈ {0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0}. At high noise levels, outputs remain semantically plausible but no longer preserve the original structure.</figcaption>
+        </figure>
+        <p class="readout">Fine texture and local geometry fade first. At η<sub>t</sub> ≥ 0.6, the generated content can remain recognizable while its spatial structure diverges from the input. This marks the limit of paired structural fidelity along the trajectory.</p>
+      </div>
+    </section>
+
+    <section class="samples">
+      <div class="shell">
+        <div class="samples-head">
+          <div><p class="eyebrow">Qualitative results</p><h2>Same latent, better decoder</h2></div>
+          <p>Each pair uses identical generative latents. Only the decoder changes. Adaptation sharpens fine details and reduces semantic artifacts across animals, birds, and objects.</p>
+        </div>
+        <div class="sample-grid">
+          <figure><img src="assets/class_014_indigo_bunting.png" alt="Indigo bunting samples before and after decoder adaptation."><figcaption>Class 14: indigo bunting <span>Top: before decoder adaptation. Bottom: after.</span></figcaption></figure>
+          <figure><img src="assets/class_081_ptarmigan.png" alt="Ptarmigan samples before and after decoder adaptation."><figcaption>Class 81: ptarmigan <span>Top: before. Bottom: after.</span></figcaption></figure>
+          <figure><img src="assets/class_130_flamingo.png" alt="Flamingo samples before and after decoder adaptation."><figcaption>Class 130: flamingo <span>Top: before. Bottom: after.</span></figcaption></figure>
+          <figure><img src="assets/class_817_sports_car.png" alt="Sports car samples before and after decoder adaptation."><figcaption>Class 817: sports car <span>Top: before. Bottom: after.</span></figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="shell section takeaways">
+      <div class="section-label">Takeaways</div>
+      <div class="section-body">
+        <ol>
+          <li><span>01</span> Standard reconstruction evaluates P<sub>e</sub>, while generation depends on P<sub>g</sub>.</li>
+          <li><span>02</span> GAR evaluates intermediate distributions P<sub>g</sub><sup>t</sup> along the generative trajectory.</li>
+          <li><span>03</span> GAR-FID reaches near-perfect correlation with gFID across tokenizers and generator scales.</li>
+          <li><span>04</span> Decoder adaptation improves gFID at every tested iMF scale without added inference cost.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="citation" id="bibtex">
+      <div class="shell section">
+        <div class="section-label">Code &amp; paper</div>
+        <div class="section-body">
+          <h2>Build on GAR</h2>
+          <div class="resource-links">
+            <a href="assets/GAR_paper.pdf" target="_blank"><span>Paper</span><small>Read the full preprint ↗</small></a>
+            <a href="https://github.com/sunset-clouds/Generation-Aware-Reconstruction" target="_blank" rel="noreferrer"><span>Code &amp; models</span><small>View the GitHub repository ↗</small></a>
+          </div>
+          <div class="bib-wrap">
+            <button class="copy-button" type="button" data-copy-target="bib-code">Copy</button>
+            <pre id="bib-code"><code>@article{fang2026aligning,
+  title   = {Aligning Reconstruction with Generation: A Latent Distribution Alignment Perspective on Evaluation and Optimization},
+  author  = {Fang, Xianghong and Shu, Wenjie and Xu, Tongda and Mou, Wenlong and Kong, Dehan and Rudner, Tim G. J.},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="shell"><span>Generation-Aware Reconstruction</span><a href="#top">Back to top ↑</a></div></footer>
+  <script src="script.js"></script>
+</body>
+</html>
