@@ -1,14 +1,26 @@
-const copyButton = document.querySelector('[data-copy-target]');
+const copyButton = document.getElementById('copy-bibtex');
+const bibtexCode = document.getElementById('bibtex-code');
 
-if (copyButton) {
+if (copyButton && bibtexCode) {
   copyButton.addEventListener('click', async () => {
-    const target = document.getElementById(copyButton.dataset.copyTarget);
+    let copied = false;
+
     try {
-      await navigator.clipboard.writeText(target.innerText);
-      copyButton.textContent = 'Copied';
-      window.setTimeout(() => { copyButton.textContent = 'Copy'; }, 1600);
+      await navigator.clipboard.writeText(bibtexCode.textContent);
+      copied = true;
     } catch (_) {
-      copyButton.textContent = 'Select text';
+      const textArea = document.createElement('textarea');
+      textArea.value = bibtexCode.textContent;
+      textArea.setAttribute('readonly', '');
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      copied = document.execCommand('copy');
+      textArea.remove();
     }
+
+    copyButton.textContent = copied ? 'Copied!' : 'Copy failed';
+    window.setTimeout(() => { copyButton.textContent = 'Copy BibTeX'; }, 1800);
   });
 }
