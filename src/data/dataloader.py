@@ -97,9 +97,7 @@ def build_dataloader(args, split='train'):
     # Check if distributed
     distributed = torch.distributed.is_initialized()
     
-    # Use 'spawn' multiprocessing to avoid JAX fork issues
-    # Or set num_workers=0 for single-process loading (safer with JAX)
-    num_workers = args.workers if not hasattr(args, 'use_jax') or not args.use_jax else 0
+    num_workers = args.workers
     
     if distributed:
         sampler = DistributedSampler(dataset, shuffle=(split == 'train'))

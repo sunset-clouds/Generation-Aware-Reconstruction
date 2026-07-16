@@ -1,0 +1,8 @@
+# Optional: only for converting legacy Flax iMF checkpoints to PyTorch.
+flax==0.10.4
+jax==0.6.2
+jaxlib==0.6.2
+numpy>=1.26,<3
+optax==0.2.5
+orbax-checkpoint==0.6.4
+torch>=2.4

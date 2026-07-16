@@ -19,7 +19,6 @@ with the commands below.
 ```text
 assets/
   sit_checkpoint_registry_template.csv   Stage-2 SiT/iFID checkpoint registry
-configs/stage3_decoder_adaptation/       Reference iMF-B/M/L/XL settings
 scripts/
   prepare_imagenet_labels.sh             Build ImageNet val folder -> class id map
   stage2_*.sh                            Stage-2 GAR-FID wrappers
@@ -28,10 +27,13 @@ src/
   integrations/sit/                      SiT checkpoint loading and GAR adapters
   pipelines/                             Stage-2 GAR-FID pipelines
   post_train.py                          Stage-3 decoder-adaptation training
-  data, models, metric, utils/           Shared runtime modules
+  models/imf_torch/                      PyTorch iMF backends and converted architecture
+  tools/jax_conversion/                  Optional legacy checkpoint conversion only
+  data, metric, utils/                   Shared runtime modules
 third_party/ifid/                        Minimal iFID/SiT runtime used by Stage 2
-requirements.txt                         Environment snapshot used in our runs
-environment_full_stage3.txt              Stage-3 environment snapshot
+requirements.txt                         PyTorch Stage-2/3 runtime dependencies
+requirements-fid.txt                     Isolated OpenAI TensorFlow FID environment
+requirements-jax-conversion.txt          Optional Flax checkpoint converter
 ```
 
 ## Quick Start Checklist
@@ -137,8 +139,25 @@ pip install -r requirements.txt
 pip install -r third_party/ifid/requirements.txt
 ```
 
-If PyTorch from `requirements.txt` does not match your CUDA driver, install the
-correct PyTorch wheel first, then install the remaining packages.
+If PyTorch from `requirements.txt` does not match your CUDA driver, install a
+compatible PyTorch wheel first. OpenAI FID should use a separate environment:
+
+```bash
+python -m venv .venv-fid
+source .venv-fid/bin/activate
+pip install -r requirements-fid.txt
+```
+
+Stage 3 is PyTorch-only. JAX/Flax is needed only when converting a legacy iMF
+checkpoint, and belongs in a separate optional environment:
+
+```bash
+python -m venv .venv-jax-conversion
+source .venv-jax-conversion/bin/activate
+pip install -r requirements-jax-conversion.txt
+bash scripts/stage3_convert_imf_checkpoint.sh \
+  iMF-B-2 /path/to/flax/checkpoint /path/to/iMF-B-2.pt
+```
 
 If you run Python entry points directly instead of the provided shell wrappers,
 set:
@@ -348,11 +367,9 @@ bash scripts/stage2_compute_correlations.sh \
 
 Stage 3 trains the SD-VAE decoder with the iMF latent generator fixed.
 
-Important: `scripts/stage3_train_decoder_adaptation.sh` currently keeps the
-first `CONFIG` argument for compatibility, but the active training parameters
-come from command-line flags and environment variables. For M/L/XL, pass the
-matching checkpoint and set `EXTRA_ARGS="--model_type iMF-M-2"` or the
-corresponding scale.
+Training parameters are explicit command-line flags and environment variables.
+For M/L/XL, pass the matching checkpoint and set
+`EXTRA_ARGS="--model_type iMF-M-2"` or the corresponding scale.
 
 ### Required Stage-3 assets
 
@@ -382,7 +399,6 @@ BATCH_SIZE=1 \
 NUM_WORKERS=0 \
 EXTRA_ARGS="--model_type iMF-B-2 --disc_start_epoch 999" \
 bash scripts/stage3_train_decoder_adaptation.sh \
-  configs/stage3_decoder_adaptation/imf_b2.yaml \
   "${IMAGENET_ROOT}" \
   assets/checkpoints/imf-gar/official-pytorch/iMF-B-2.pt \
   results/stage3_smoke/imf_b2
@@ -403,7 +419,6 @@ BATCH_SIZE=32 \
 NUM_WORKERS=8 \
 EXTRA_ARGS="--model_type iMF-B-2 --minimum_noise_level 0.25 --maximum_noise_level 0.45" \
 bash scripts/stage3_train_decoder_adaptation.sh \
-  configs/stage3_decoder_adaptation/imf_b2.yaml \
   "${IMAGENET_ROOT}" \
   assets/checkpoints/imf-gar/official-pytorch/iMF-B-2.pt \
   results/decoder_adaptation_imf_b2_noise025045
@@ -495,7 +510,6 @@ SD_VAE_PATH=/mnt/nfs/wenjie/vae_assets/sd-vae-ft-mse \
   --standalone --nnodes=1 --nproc_per_node=1 src/post_train.py \
   --dataset_dir /mnt/nfs/wenjie/dataset/imagenet_idx \
   --pretrained_imf_pytorch /mnt/nfs/wenjie/IMF-GAP_V1/checkpoints/pytorch/iMF-B-2.pt \
-  --use_pytorch_imf \
   --checkpoint_dir results/stage3_runtime_check/checkpoints \
   --results_dir results/stage3_runtime_check/results \
   --saver_dir results/stage3_runtime_check/saver \

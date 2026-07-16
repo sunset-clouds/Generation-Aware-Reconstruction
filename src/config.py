@@ -1,17 +1,11 @@
-import json
 import os
 import random
-import re
-import subprocess
-import sys
-import time
+import argparse
+
 import numpy as np
 import torch
-from collections import OrderedDict
-from typing import Optional, Union
-import argparse
-import torch.distributed as dist
-from utils.misc import str2bool
+from models.imf_torch.registry import model_defaults
+
 try:
     import ruamel.yaml as yaml
 except ModuleNotFoundError:
@@ -101,8 +95,6 @@ def parse_arg():
                         help='weight decay for optimizer')
     parser.add_argument('--eval_epochs', type=int, default=1,
                         help='epochs between evaluations (0 = every epoch)')
-    parser.add_argument('--eval_before_train', action='store_true', default=False,
-                        help='run evaluation before training starts')
     parser.add_argument('--resume', default='', type=str,
                         help='path to a post-training checkpoint to resume from')
     parser.add_argument('--max_train_steps', type=int, default=0,
@@ -115,10 +107,6 @@ def parse_arg():
                         help='debug mode: disable noise+iMF and GAN, only use rec loss (for sanity check)')
     parser.add_argument('--disable_gan', action='store_true', default=False,
                         help='disable GAN loss (only rec + perceptual loss)')
-    parser.add_argument('--disable_noise', action='store_true', default=False,
-                        help='disable noise and iMF denoising (directly use z_real for decoding)')
-    parser.add_argument('--save_vis', action='store_true', default=False,
-                        help='save visualization images during training')
     parser.add_argument('--_skip_diffusion_load', action='store_true', default=False,
                         help='skip loading diffusion model (for debug)')
 
@@ -133,52 +121,12 @@ def parse_arg():
                         help='directory for saving results')
     parser.add_argument('--saver_dir', default="./saver/", type=str,
                         help='directory for saving training records')
-    parser.add_argument('--reconstruction_dir', default="./reconstruction/", type=str,
-                        help='directory for reconstruction images')
     parser.add_argument('--yaml_dir', default="./yaml/", type=str,
                         help='directory for saving yaml file')
-    parser.add_argument('--pretrained_imf', default="", type=str,
-                        help='path to pretrained iMF checkpoint (JAX)')
     parser.add_argument('--pretrained_imf_pytorch', default="", type=str,
-                        help='path to pretrained iMF PyTorch checkpoint')
-    parser.add_argument('--use_pytorch_imf', action='store_true', default=False,
-                        help='use PyTorch version of iMF (faster, no memory conflicts)')
-    parser.add_argument('--pretrained_vae', default="", type=str,
-                        help='path to pretrained VAE checkpoint (optional, uses HuggingFace if empty)')
+                        help='path to official or converted iMF PyTorch checkpoint')
     parser.add_argument('--pretrained_decoder', default="", type=str,
                         help='path to post-trained decoder checkpoint (for evaluation)')
-    parser.add_argument('--fid_cache_ref', default="", type=str,
-                        help='path to FID reference statistics')
-    parser.add_argument('--eval_fid', action='store_true', default=False,
-                        help='evaluate FID/IS during training')
-    parser.add_argument('--fid_samples', type=int, default=50000,
-                        help='number of samples for FID evaluation during training')
-    
-    # ============================================================
-    # Evaluation Configuration
-    # ============================================================
-    parser.add_argument('--num_samples', type=int, default=50000,
-                        help='number of samples for FID computation')
-    parser.add_argument('--noise_level', type=float, default=0.5,
-                        help='fixed noise level for denoising rFID (single value)')
-    parser.add_argument('--noise_levels', type=str, default='0.1,0.3,0.5',
-                        help='comma-separated noise levels for denoising rFID (e.g., "0.1,0.3,0.5")')
-    
-    # Use store_true/store_false for proper flag handling
-    parser.add_argument('--compute_vae_rfid', action='store_true', default=False,
-                        help='compute VAE-only rFID')
-    parser.add_argument('--no-compute_vae_rfid', dest='compute_vae_rfid', action='store_false',
-                        help='do not compute VAE-only rFID')
-    parser.add_argument('--compute_gfid', action='store_true', default=False,
-                        help='compute generation FID')
-    parser.add_argument('--no-compute_gfid', dest='compute_gfid', action='store_false',
-                        help='do not compute generation FID')
-    parser.add_argument('--compute_denoise_rfid', action='store_true', default=False,
-                        help='compute denoising rFID')
-    parser.add_argument('--no-compute_denoise_rfid', dest='compute_denoise_rfid', action='store_false',
-                        help='do not compute denoising rFID')
-    parser.add_argument('--compute_all', action='store_true', default=True,
-                        help='compute all metrics (vae_rfid, gfid, denoise_rfid)')
 
     # ============================================================
     # Seed Configuration
@@ -199,17 +147,14 @@ def parse_arg():
     # ============================================================
     # Distributed Training
     # ============================================================
-    parser.add_argument('--nnodes', default=-1, type=int, 
-                        help='node rank for distributed training.')
-    parser.add_argument('--node_rank', default=-1, type=int, 
-                        help='node rank for distributed training.')
     parser.add_argument('--local-rank', default=-1, type=int, 
                         help='node rank for distributed training')
-    parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', 
-                        type=str, help='url used to set up distributed training.')
     parser.add_argument('--dist-backend', default='nccl', type=str,
                         help='distributed backend.')
     args = parser.parse_args()
+
+    if not args.pretrained_imf_pytorch and not args._skip_diffusion_load and not args.debug_mode:
+        parser.error('--pretrained_imf_pytorch is required unless diffusion loading is disabled')
 
     # Handle distributed training environment variables
     args.world_size = int(os.environ.get("WORLD_SIZE", 1))
@@ -222,26 +167,15 @@ def parse_arg():
     # ============================================================
     # Auto-set CFG parameters based on model type
     # ============================================================
-    MODEL_CFG = {
-        'iMF-B-2': {'omega': 8.0, 't_min': 0.4, 't_max': 0.65},
-        'iMF-M-2': {'omega': 10.5, 't_min': 0.4, 't_max': 0.6},
-        'iMF-L-2': {'omega': 10.5, 't_min': 0.4, 't_max': 0.6},
-        'iMF-XL-2': {'omega': 8.0, 't_min': 0.42, 't_max': 0.62},
-    }
+    cfg_defaults = model_defaults(args.model_type)
     
     if args.omega is None:
-        args.omega = MODEL_CFG[args.model_type]['omega']
+        args.omega = cfg_defaults['omega']
     if args.t_min is None:
-        args.t_min = MODEL_CFG[args.model_type]['t_min']
+        args.t_min = cfg_defaults['t_min']
     if args.t_max is None:
-        args.t_max = MODEL_CFG[args.model_type]['t_max']
+        args.t_max = cfg_defaults['t_max']
     
-    # If compute_all is True and none of the specific flags were set, enable all
-    if args.compute_all and not (args.compute_vae_rfid or args.compute_gfid or args.compute_denoise_rfid):
-        args.compute_vae_rfid = True
-        args.compute_gfid = True
-        args.compute_denoise_rfid = True
-
     # ============================================================
     # Create directories
     # ============================================================
@@ -251,7 +185,7 @@ def parse_arg():
     # Generate saver_name_pre if not provided
     if not args.saver_name_pre:
         args.saver_name_pre = 'IMF_Decoder_GAP_{}_{}_{}_{}_{}'.format(
-            args.dataset_name, args.model_type, args.num_steps, 
+            args.dataset_name, args.model_type, args.num_steps,
             args.maximum_noise_level, args.normalized
         )
 
