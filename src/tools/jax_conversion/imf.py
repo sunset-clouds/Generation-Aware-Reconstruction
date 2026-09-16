@@ -7,7 +7,7 @@ Ported from iMF codebase for standalone operation.
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
-from models import mit
+from tools.jax_conversion import mit
 
 
 def generate(variable, model, rng, n_sample, latent_size, num_classes,

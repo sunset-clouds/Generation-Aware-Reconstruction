@@ -9,6 +9,7 @@ from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
+from models.imf_torch.registry import model_defaults
 
 
 # Model name mapping: iMF-B-2 -> imfDiT_B_2
@@ -18,15 +19,6 @@ MODEL_STR_MAP = {
     'iMF-L-2': 'imfDiT_L_2',
     'iMF-XL-2': 'imfDiT_XL_2',
 }
-
-# CFG params from imeantflow-torch README
-CFG_PARAMS = {
-    'iMF-B-2': {'omega': 8.0, 't_min': 0.4, 't_max': 0.65},
-    'iMF-M-2': {'omega': 10.5, 't_min': 0.4, 't_max': 0.6},
-    'iMF-L-2': {'omega': 10.5, 't_min': 0.4, 't_max': 0.6},
-    'iMF-XL-2': {'omega': 8.0, 't_min': 0.42, 't_max': 0.62},
-}
-
 
 class BatchGenerator:
     """Deterministic noise generator matching imeantflow-torch's tu.BatchGenerator."""
@@ -65,7 +57,7 @@ class OfficialImfWrapper(nn.Module):
         self.latent_size = 32
         self.num_classes = 1000
 
-        cfg = CFG_PARAMS[model_type]
+        cfg = model_defaults(model_type)
         self.omega = cfg['omega']
         self.t_min = cfg['t_min']
         self.t_max = cfg['t_max']

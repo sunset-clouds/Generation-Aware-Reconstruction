@@ -8,7 +8,7 @@ import math
 import jax.numpy as jnp
 from flax import linen as nn
 
-from models.torch_models import TorchLinear, TorchEmbedding
+from tools.jax_conversion.torch_models import TorchLinear, TorchEmbedding
 
 
 class TimestepEmbedder(nn.Module):

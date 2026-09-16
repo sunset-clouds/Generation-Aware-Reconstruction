@@ -1,0 +1,5 @@
+# OpenAI TensorFlow FID is kept separate from the PyTorch training environment.
+numpy>=1.26,<2.1
+scipy>=1.11,<1.15
+tensorflow-cpu>=2.16,<2.19
+tqdm>=4.66

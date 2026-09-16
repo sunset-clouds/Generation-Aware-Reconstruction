@@ -160,7 +160,6 @@ class MockArgs:
             self.cfg_t_min = cfg_t_min
         if cfg_t_max is not None:
             self.cfg_t_max = cfg_t_max
-        self.use_pytorch_imf = True
         self.maximum_noise_level = 0.2
         self.normalized = False
         self.stage = 'eval'

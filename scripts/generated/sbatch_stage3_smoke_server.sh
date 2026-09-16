@@ -1,8 +1,6 @@
 #!/bin/bash -l
-#SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G
 #SBATCH --time=02:00:00
@@ -37,6 +35,8 @@ export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 
 mkdir -p "${OUT_ROOT}" "${PROJECT_DIR}/logs/slurm" "${MPLCONFIGDIR}"
 
+SMOKE_EXTRA_ARGS=${SMOKE_EXTRA_ARGS:-"--model_type iMF-B-2 --disable_gan --fixed_noise --maximum_noise_level 0.4 --disc_start_epoch 99"}
+
 echo "============================================"
 echo " GAR-FID Stage3 smoke"
 echo " Job ID: ${SLURM_JOB_ID:-manual}"
@@ -52,9 +52,8 @@ MAX_TRAIN_STEPS=2 \
 MAX_EVAL_STEPS=0 \
 BATCH_SIZE=2 \
 NUM_WORKERS=2 \
-EXTRA_ARGS="--model_type iMF-B-2 --disable_gan --fixed_noise --maximum_noise_level 0.4 --disc_start_epoch 99" \
+EXTRA_ARGS="${SMOKE_EXTRA_ARGS}" \
 bash scripts/stage3_train_decoder_adaptation.sh \
-  configs/stage3_decoder_adaptation/imf_b2.yaml \
   "${DATASET_ROOT}" \
   "${IMF_CKPT}" \
   "${OUT_ROOT}"

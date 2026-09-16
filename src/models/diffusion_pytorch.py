@@ -1,37 +1,17 @@
 """
 PyTorch Diffusion Model wrapper for iMF.
 
-This is a pure PyTorch implementation that avoids JAX-PyTorch memory conflicts.
+This is a pure PyTorch implementation for converted iMF checkpoints.
 Implements the DiffusionInterface for pluggable eval pipeline support.
 """
 
-import os
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-import numpy as np
-
-_IMF_PT_COMPONENTS = None
-
-
-def _load_imf_pt_components():
-    """
-    Lazily import PyTorch iMF conversion components.
-
-    This avoids requiring the JAX/Flax conversion stack when callers only need
-    `DiffusionInterface` (for example, the SiT GAR smoke-test path).
-    """
-    global _IMF_PT_COMPONENTS
-    if _IMF_PT_COMPONENTS is None:
-        import sys
-
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from tools.convert_jax_to_pytorch import MiT_PyTorch, MODEL_CONFIGS
-
-        _IMF_PT_COMPONENTS = (MiT_PyTorch, MODEL_CONFIGS)
-    return _IMF_PT_COMPONENTS
+from models.imf_torch.converted_arch import MODEL_CONFIGS, MiT_PyTorch
+from models.imf_torch.registry import model_defaults
 
 
 class DiffusionInterface(ABC):
@@ -68,14 +48,6 @@ class DiffusionModelPyTorch(nn.Module, DiffusionInterface):
     Implements DiffusionInterface for the unified eval pipeline.
     """
     
-    # CFG parameters for each model variant
-    CFG_PARAMS = {
-        'iMF-B-2': {'omega': 8.0, 't_min': 0.4, 't_max': 0.65},
-        'iMF-M-2': {'omega': 10.5, 't_min': 0.4, 't_max': 0.6},
-        'iMF-L-2': {'omega': 10.5, 't_min': 0.4, 't_max': 0.6},
-        'iMF-XL-2': {'omega': 8.0, 't_min': 0.42, 't_max': 0.62},
-    }
-    
     def __init__(self, args):
         super().__init__()
         self.args = args
@@ -86,12 +58,10 @@ class DiffusionModelPyTorch(nn.Module, DiffusionInterface):
         
         # Get CFG parameters. Command-line eval jobs can override these through
         # MockArgs without mutating the official defaults below.
-        cfg_params = self.CFG_PARAMS[self.model_type]
+        cfg_params = model_defaults(self.model_type)
         self.omega = float(getattr(args, 'cfg_omega', cfg_params['omega']))
         self.t_min = float(getattr(args, 'cfg_t_min', cfg_params['t_min']))
         self.t_max = float(getattr(args, 'cfg_t_max', cfg_params['t_max']))
-
-        MiT_PyTorch, MODEL_CONFIGS = _load_imf_pt_components()
 
         # Create model
         model_cfg = MODEL_CONFIGS[self.model_type]
@@ -287,21 +257,3 @@ class DiffusionModelPyTorch(nn.Module, DiffusionInterface):
             z_denoised = z_denoised * std + mean
         
         return z_denoised
-
-
-def get_diffusion_model(args, use_pytorch=True):
-    """
-    Factory function to get diffusion model.
-    
-    Args:
-        args: Configuration
-        use_pytorch: If True, use PyTorch version; else use JAX version
-        
-    Returns:
-        DiffusionModel instance
-    """
-    if use_pytorch:
-        return DiffusionModelPyTorch(args)
-    else:
-        from models.diffusion import DiffusionModel
-        return DiffusionModel(args)

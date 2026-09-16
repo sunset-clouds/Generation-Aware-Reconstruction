@@ -11,8 +11,8 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
-from models.embedder import PatchEmbedder, TimestepEmbedder, LabelEmbedder
-from models.torch_models import TorchLinear, RMSNorm, SwiGLUMlp
+from tools.jax_conversion.embedder import PatchEmbedder, TimestepEmbedder, LabelEmbedder
+from tools.jax_conversion.torch_models import TorchLinear, RMSNorm, SwiGLUMlp
 
 
 def unsqueeze(t, dim):

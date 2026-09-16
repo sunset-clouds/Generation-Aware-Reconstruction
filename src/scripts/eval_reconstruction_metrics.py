@@ -51,7 +51,6 @@ ALL_MODES = ("vanilla_rfid", "our_rfid_nocfg", "our_rfid_cfg")
 
 
 def build_model(args, device: torch.device):
-    args.use_pytorch_imf = True
     args.vae_type = "mse"
     model = TokenizerFlowComposition(args).to(device)
     model.eval_mode()

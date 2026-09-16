@@ -15,12 +15,7 @@ torch.backends.cudnn.allow_tf32 = True
 from torch import distributed as tdist
 from tqdm import tqdm
 
-import jax
-
 from utils.util import Pack
-from metric.metric import PSNR, LPIPS, SSIM
-
-
 def is_main_process():
     """Check if current process is main (rank 0)."""
     if tdist.is_available() and tdist.is_initialized():
@@ -28,7 +23,7 @@ def is_main_process():
     return int(os.environ.get('LOCAL_RANK', 0)) == 0
 
 
-def eval_one_epoch(args, model, epoch, val_dataloader, len_val_set, rng=None):
+def eval_one_epoch(args, model, epoch, val_dataloader, len_val_set):
     """
     Evaluate model on validation set.
     
@@ -38,11 +33,11 @@ def eval_one_epoch(args, model, epoch, val_dataloader, len_val_set, rng=None):
         epoch: Current epoch
         val_dataloader: Validation dataloader
         len_val_set: Total size of validation set
-        rng: JAX random key (optional)
-        
     Returns:
         Pack with psnr, ssim, lpips, rec_loss
     """
+    from metric.metric import PSNR, LPIPS, SSIM
+
     model.eval()
     
     # Initialize metrics
@@ -53,22 +48,15 @@ def eval_one_epoch(args, model, epoch, val_dataloader, len_val_set, rng=None):
     
     ssim, psnr, lpips, rec_loss, total_num = 0.0, 0.0, 0.0, 0.0, 0
     
-    # Initialize RNG if not provided
-    if rng is None:
-        rng = jax.random.PRNGKey(args.seed + epoch)
-    
     for step, (x, labels) in enumerate(tqdm(val_dataloader, desc=f"Eval epoch {epoch}", disable=not is_main_process())):
         local_rank = int(os.environ.get('LOCAL_RANK', 0))
         x = x.cuda(local_rank, non_blocking=True)
         labels = labels.cuda(local_rank, non_blocking=True)
         batch_size = x.size(0)
         
-        # Split RNG
-        rng, rng_step = jax.random.split(rng)
-        
         with torch.no_grad():
             # Get reconstruction and loss
-            x_rec, rec_loss_eval = model.module.collect_eval_info(x, rng=rng_step, labels=labels)
+            x_rec, rec_loss_eval = model.module.collect_eval_info(x, labels=labels)
             
             # Normalize to [0, 1] for metrics
             x_norm = (x + 1.0) / 2.0
@@ -116,8 +104,6 @@ def eval_one_epoch(args, model, epoch, val_dataloader, len_val_set, rng=None):
     # Restore training mode
     model.train()
     model.module.tokenizer.vae.encoder.eval()
-    if model.module.diffusion is not None:
-        model.module.diffusion.eval()
     if model.module.diffusion_pytorch is not None:
         model.module.diffusion_pytorch.eval()
     

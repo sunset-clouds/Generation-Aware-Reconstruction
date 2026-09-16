@@ -22,7 +22,7 @@ Pipeline:
 Usage:
     torchrun --nproc_per_node=4 post_train.py \
         --model_type iMF-B-2 \
-        --pretrained_imf /path/to/checkpoint \
+        --pretrained_imf_pytorch /path/to/checkpoint.pt \
         --dataset_dir /path/to/imagenet
 """
 
@@ -34,23 +34,17 @@ import warnings
 # Suppress warnings before imports
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TORCHDYNAMO_LOGLEVEL"] = "INFO"
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.3"
 warnings.filterwarnings('ignore')
 
-import numpy as np
-import pandas as pd
 import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 from torch import nn
 from torch import distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from tqdm import tqdm
 
-import jax
 import config
-from utils.util import Logger, LossManager, Pack, save_checkpoint
+from utils.util import Logger, LossManager, save_checkpoint
 from utils.distributed import init_distributed_mode
 from data.dataloader import build_dataloader
 from models.model import TokenizerFlowComposition
@@ -117,7 +111,7 @@ def main_worker(args):
         tokenizer_para = sum(p.numel() for p in model.tokenizer.parameters())
         print(f"Tokenizer Parameters: {tokenizer_para / 1e6:.2f}M")
         
-        if model.diffusion is not None:
+        if model.diffusion_pytorch is not None:
             print(f"Diffusion Model: {args.model_type} (frozen)")
     
     model = model.to(device)
@@ -177,20 +171,16 @@ def main_worker(args):
     model = DDP(model.to(device), device_ids=[args.gpu], find_unused_parameters=True)
     model.train()
     model.module.tokenizer.vae.encoder.eval()
-    if model.module.diffusion is not None:
-        model.module.diffusion.eval()
     if model.module.diffusion_pytorch is not None:
         model.module.diffusion_pytorch.eval()
     
-    post_loss = DDP(post_loss.to(device), device_ids=[args.gpu])
+    post_loss = post_loss.to(device)
+    if any(parameter.requires_grad for parameter in post_loss.parameters()):
+        post_loss = DDP(post_loss, device_ids=[args.gpu])
+    post_loss_module = post_loss.module if isinstance(post_loss, DDP) else post_loss
     post_loss.train()
-    post_loss.module.perceptual_loss.eval()
-    post_loss.module.gram_loss.eval()
-    
-    # ============================================================
-    # Initialize JAX RNG
-    # ============================================================
-    rng = jax.random.PRNGKey(args.seed)
+    post_loss_module.perceptual_loss.eval()
+    post_loss_module.gram_loss.eval()
     
     # ============================================================
     # Training Loop
@@ -214,9 +204,6 @@ def main_worker(args):
         start_time = time.time()
         
         for step, (x, labels) in enumerate(train_dataloader):
-            # Split RNG for this step
-            rng, rng_step = jax.random.split(rng)
-            
             with torch.autocast(device_type='cuda', dtype=torch.float32):
                 x = x.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
@@ -225,7 +212,7 @@ def main_worker(args):
                 # Forward pass
                 # ============================================================
                 optimizer.zero_grad()
-                x_rec = model(x, rng=rng_step, labels=labels)
+                x_rec = model(x, labels=labels)
                 
                 # ============================================================
                 # Generator loss
@@ -309,8 +296,8 @@ def main_worker(args):
                 'model': model.module.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'discriminator': (
-                    post_loss.module.discriminator.state_dict()
-                    if post_loss.module.discriminator is not None else None
+                    post_loss_module.discriminator.state_dict()
+                    if post_loss_module.discriminator is not None else None
                 ),
                 'optimizer_disc': optimizer_disc.state_dict() if optimizer_disc is not None else None,
                 'args': vars(args),
@@ -349,6 +336,8 @@ def main_worker(args):
                     })
                 
                 # Save results
+                import pandas as pd
+
                 results_val_len = len(results_eval['epoch'])
                 data_frame = pd.DataFrame(data=results_eval, index=range(1, results_val_len + 1))
                 data_frame.to_csv(
@@ -373,8 +362,8 @@ def main_worker(args):
             'model': model.module.state_dict(),
             'optimizer': optimizer.state_dict(),
             'discriminator': (
-                post_loss.module.discriminator.state_dict()
-                if post_loss.module.discriminator is not None else None
+                post_loss_module.discriminator.state_dict()
+                if post_loss_module.discriminator is not None else None
             ),
             'optimizer_disc': optimizer_disc.state_dict() if optimizer_disc is not None else None,
             'args': vars(args),
