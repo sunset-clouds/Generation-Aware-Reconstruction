@@ -5,7 +5,7 @@
 ### A Latent Distribution Perspective on Evaluation and Improvement
 
 [![arXiv](https://img.shields.io/badge/arXiv-Preprint-b31b1b.svg)](docs/assets/GAR_paper.pdf)
-[![Project Page](https://img.shields.io/badge/Project-Page-3b6ea8.svg)](https://github.com/sunset-clouds/Generation-Aware-Reconstruction)
+[![Project Page](https://img.shields.io/badge/Project-Page-3b6ea8.svg)](https://sunset-clouds.github.io/Generation-Aware-Reconstruction/)
 [![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b.svg)](docs/assets/GAR_paper.pdf)
 [![Checkpoints](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Checkpoints-ffd21e.svg)](https://huggingface.co/sunset-clouds/GAR/tree/main)
 
