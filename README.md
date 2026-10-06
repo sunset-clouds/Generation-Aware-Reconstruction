@@ -1,8 +1,6 @@
 <div align="center">
 
-# Bridging Reconstruction and Generation
-
-### A Latent Distribution Perspective on Evaluation and Improvement
+# A Latent Distribution Perspective on Evaluating and Improving Latent Generative Models
 
 [![arXiv](https://img.shields.io/badge/arXiv-Preprint-b31b1b.svg)](docs/assets/GAR_paper.pdf)
 [![Project Page](https://img.shields.io/badge/Project-Page-3b6ea8.svg)](https://sunset-clouds.github.io/Generation-Aware-Reconstruction/)
@@ -17,24 +15,24 @@
 
 </div>
 
-> **TL;DR:** Reconstruction and generation apply the same decoder to different latent distributions. Generation-aware reconstruction (GAR) probes the transition between them, provides an evaluation metric that correlates strongly with generative performance, and enables decoder adaptation that improves generation without additional inference cost.
+Reconstruction and generation apply the same decoder to different latent distributions. Generation-aware reconstruction (GAR) probes the transition between them, provides a diagnostic that correlates strongly with generative performance, and preserves paired supervision for decoder adaptation. One epoch of CFG-aware adaptation improves guided generation across all tested iMF scales without additional inference cost.
 
 <p align="center">
   <a href="docs/assets/Figure1.pdf">
     <img src="docs/assets/Figure1.png" width="100%" alt="Reconstruction-generation latent distribution mismatch and generation-aware reconstruction">
   </a>
   <br>
-  <big><big>Bridging reconstruction and generation through latent distributions.</big></big>
+  <big><big>A latent distribution perspective on evaluation and decoder adaptation.</big></big>
 </p>
 
 ## Overview
 
-Why can strong reconstruction coexist with weak generation? Reconstruction decodes encoder latents drawn from $P_e$, while generation decodes latents drawn from $P_g$. Reconstruction FID (rFID) therefore evaluates the decoder under a different input distribution from generative FID (gFID).
+Reconstruction quality is often assumed to correlate with generative performance, but reconstruction FID (rFID) can exhibit weak or even negative correlation with generation FID (gFID). Reconstruction decodes encoder latents drawn from $P_e$, while generation uses the same decoder on generator-produced latents drawn from $P_g$. We investigate this latent distribution mismatch as an explanation for why reconstruction quality need not track generative performance.
 
 **Generation-aware reconstruction (GAR)** makes this transition observable. It perturbs encoder latents, denoises them with a frozen generative model, and decodes the resulting intermediate latents. The noise level $\eta_t$ controls the trajectory: $\eta_t=0$ recovers standard reconstruction, while $\eta_t=1$ recovers generation from pure noise.
 
 - **Evaluation:** GAR-FID measures FID between decoded GAR outputs and the source image set, tracking decoder behavior as its inputs approach the generation-time distribution.
-- **Improvement:** Intermediate GAR latents retain correspondence with source images and provide paired supervision for decoder adaptation. Only the decoder is updated; the encoder and generative model remain frozen.
+- **Improvement:** Intermediate GAR latents move toward generation-time distributions while retaining correspondence with source images, providing paired, generation-aware supervision for decoder adaptation. Only the decoder is updated; the encoder and generative model remain frozen.
 
 <p align="center">
   <a href="docs/assets/GAR_pipeline.pdf">
@@ -63,16 +61,37 @@ CFG denotes classifier-free guidance. GAR-FID provides a diagnostic along the la
 
 ### Decoder adaptation improves generation
 
-Decoder adaptation (DA) improves gFID at every tested iMF scale under both the official iMF and OpenAI evaluation protocols. Below are our reproduced results under the **OpenAI protocol**; lower gFID is better.
+We compare two decoder adaptation (DA) settings: **DA w/o CFG**, trained for **10 epochs** on GAR latents generated without classifier-free guidance, and **CFG-aware DA**, trained for **one epoch** on GAR latents generated with CFG. Both update only the decoder and add no inference cost. The tables below reproduce the results in paper Table 2 under the **official iMF** and **OpenAI** evaluation protocols; lower gFID is better.
 
-| Model | Without DA, no CFG | With DA, no CFG | Without DA, with CFG | With DA, with CFG |
-|:--|--:|--:|--:|--:|
-| iMF-B/2 | 16.41 | **12.41** | 3.47 | **3.12** |
-| iMF-M/2 | 11.92 | **9.66** | 2.40 | **2.30** |
-| iMF-L/2 | 9.26 | **7.41** | 1.90 | **1.80** |
-| iMF-XL/2 | 9.41 | **7.61** | 1.80 | **1.73** |
+**gFID evaluated without CFG**
 
-Adaptation changes only the decoder and adds no inference cost. Under the official iMF protocol, adapted iMF-XL/2 achieves a gFID of **1.56 with CFG**; results from the two protocols should be compared within their respective settings.
+| Evaluation protocol | Model | Without DA | DA w/o CFG (10 epochs) |
+|:--|:--|--:|--:|
+| Official iMF | iMF-B/2 | 16.58 | **12.21** |
+| Official iMF | iMF-M/2 | 11.92 | **9.52** |
+| Official iMF | iMF-L/2 | 9.28 | **7.34** |
+| Official iMF | iMF-XL/2 | 9.78 | **7.47** |
+| OpenAI | iMF-B/2 | 16.41 | **12.41** |
+| OpenAI | iMF-M/2 | 11.92 | **9.66** |
+| OpenAI | iMF-L/2 | 9.26 | **7.41** |
+| OpenAI | iMF-XL/2 | 9.41 | **7.61** |
+
+**gFID evaluated with CFG**
+
+| Evaluation protocol | Model | Without DA | DA w/o CFG (10 epochs) | CFG-aware DA (1 epoch) |
+|:--|:--|--:|--:|--:|
+| Official iMF | iMF-B/2 | 3.37 | 2.90 | **2.81** |
+| Official iMF | iMF-M/2 | 2.27 | 2.12 | **1.98** |
+| Official iMF | iMF-L/2 | 1.86 | 1.65 | **1.58** |
+| Official iMF | iMF-XL/2 | 1.73 | 1.56 | **1.50** |
+| OpenAI | iMF-B/2 | 3.47 | 3.12 | **3.01** |
+| OpenAI | iMF-M/2 | 2.40 | 2.30 | **2.19** |
+| OpenAI | iMF-L/2 | 1.90 | 1.80 | **1.70** |
+| OpenAI | iMF-XL/2 | 1.80 | 1.73 | **1.61** |
+
+All baselines above are our reproductions under the respective protocols. CFG-aware DA results without CFG are not reported in the paper. CFG in the table headings refers to evaluation; CFG in the adaptation labels refers to GAR construction during training. Compare results within the same evaluation protocol.
+
+One epoch of CFG-aware DA outperforms 10 epochs of DA w/o CFG on guided generation at every tested iMF scale under both protocols. The same one-epoch setting also improves MeanFlow-XL/2 from **3.43 to 2.96** and DMF-XL/2+ from **2.16 to 1.90** under the official iMF evaluation protocol.
 
 <p align="center">
   <a href="docs/assets/class_014_indigo_bunting.pdf">
@@ -218,7 +237,7 @@ Use the registry to select other checkpoint groups. [`scripts/stage2_compute_cor
 
 ### Decoder adaptation
 
-Train the decoder with a frozen iMF-B/2 generator and noise levels sampled from $[0.25, 0.45]$:
+The following command runs the **10-epoch DA w/o CFG** setting with a frozen iMF-B/2 generator and noise levels sampled from $[0.25, 0.45]$:
 
 ```bash
 NPROC_PER_NODE=8 EPOCHS=10 BATCH_SIZE=32 NUM_WORKERS=8 \
@@ -270,10 +289,10 @@ This example evaluates generation with CFG. Use the model-specific guidance sett
 If this work is useful for your research, please cite:
 
 ```bibtex
-@article{fang2026bridging,
-  title   = {Bridging Reconstruction and Generation: A Latent Distribution Perspective on Evaluation and Improvement},
+@article{fang2026latent,
+  title   = {A Latent Distribution Perspective on Evaluating and Improving Latent Generative Models},
   author  = {Fang, Xianghong and Shu, Wenjie and Xu, Tongda and Mou, Wenlong and Kong, Dehan and Rudner, Tim G. J.},
-  journal = {Arxiv},
+  journal = {arXiv},
   year    = {2026}
 }
 ```

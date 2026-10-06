@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Generation-aware reconstruction diagnoses decoder behavior along the latent trajectory from reconstruction to generation. Intermediate GAR latents provide paired supervision for decoder adaptation.">
+  <meta name="description" content="A latent distribution perspective on evaluating and improving latent generative models. Generation-aware reconstruction (GAR) diagnoses decoder behavior and enables decoder adaptation, including one-epoch CFG-aware adaptation.">
   <meta name="theme-color" content="#f7f4ee">
-  <title>Bridging Reconstruction and Generation: A Latent Distribution Perspective on Evaluation and Improvement</title>
+  <title>A Latent Distribution Perspective on Evaluating and Improving Latent Generative Models</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -22,8 +22,7 @@
 
   <main id="top">
     <section class="hero shell">
-      <h1><span class="title-sky">Bridging Reconstruction</span> <span class="title-black">and Generation:</span></h1>
-      <p class="dek">A Latent Distribution Perspective on Evaluation and Improvement</p>
+      <h1><span class="title-sky">A Latent Distribution Perspective</span> <span class="title-black">on Evaluating and Improving Latent Generative Models</span></h1>
 
       <p class="authors">
         <a href="https://sunset-clouds.github.io/" target="_blank" rel="noopener noreferrer">Xianghong Fang</a><sup>1,*</sup>
@@ -41,8 +40,7 @@
         <a class="button" href="#citation">BibTeX <span>↓</span></a>
       </div>
 
-      <div class="thesis">what causes the reconstruction-generation discrepancy in latent generative models?</div>
-      <p class="answer">Reconstruction and generation use the same decoder on different latent distributions. Generation-aware reconstruction (GAR) probes how decoder behavior changes along the trajectory from reconstruction to generation, making this transition observable and diagnosable.</p>
+      <p class="hero-summary">Reconstruction quality need not track generative performance: the same decoder receives encoder latents during reconstruction and generator-produced latents during generation. Generation-aware reconstruction (GAR) probes decoder behavior along the transition between these distributions. Intermediate GAR latents retain source correspondence, providing paired, generation-aware supervision for decoder adaptation.</p>
     </section>
 
     <section id="idea" class="section shell split">
@@ -50,7 +48,7 @@
       <div class="prose">
         <h2>Two pathways.<br>Two latent distributions.</h2>
         <p>Standard reconstruction maps an image to an encoder latent <i>z</i><sub>e</sub> ∼ P<sub>e</sub>, then asks the decoder to recover the input. Generation starts from noise and produces a generative latent <i>z</i><sub>g</sub> ∼ P<sub>g</sub>. The same decoder receives inputs from different distributions.</p>
-        <p>rFID measures decoder behavior under P<sub>e</sub>, while gFID depends on behavior under P<sub>g</sub>. The evaluation mismatch explains why strong reconstruction can coexist with weak generation.</p>
+        <p>rFID measures decoder behavior under P<sub>e</sub>, while gFID depends on behavior under P<sub>g</sub>. This latent distribution mismatch provides a perspective on why strong reconstruction can coexist with weak generation.</p>
       </div>
       <figure class="paper-figure full-span">
         <img src="assets/Figure1.png" alt="Overview of the reconstruction and generation mismatch, the generative trajectory, and the correlations of rFID and GAR-FID with gFID.">
@@ -140,7 +138,7 @@
         <p class="figure-setup">GAR outputs reveal the progressive loss of source structure as the trajectory moves from reconstruction toward generation.</p>
         <figure class="paper-figure">
           <img src="assets/GAR_examples.png" alt="GAR outputs at increasing noise levels showing progressive loss of source structure." loading="lazy">
-          <figcaption><span class="figure-number">Figure 9.</span> Progressive loss of source structure along the GAR trajectory. Each row shows an input followed by GAR outputs at η<sub>t</sub> ∈ {0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0}. Fine structure and local texture gradually degrade. At high noise levels (e.g., η<sub>t</sub> ≥ 0.6 in these examples), outputs can remain semantically plausible while no longer preserving the source structure.</figcaption>
+          <figcaption><span class="figure-number">Figure 8.</span> Progressive loss of source structure along the GAR trajectory. Each row shows an input followed by GAR outputs at η<sub>t</sub> ∈ {0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0}. Fine structure and local texture gradually degrade. At high noise levels (e.g., η<sub>t</sub> ≥ 0.6 in these examples), outputs can remain semantically plausible while no longer preserving the source structure.</figcaption>
         </figure>
         <p class="figure-readout">This progression exposes the trade-off between generation awareness and source correspondence. Intermediate noise levels provide generation-relevant latents while retaining meaningful paired supervision for decoder adaptation.</p>
       </div>
@@ -154,23 +152,32 @@
           <p>Intermediate GAR latents move toward generation-time distributions while retaining correspondence with their source images. Decoder adaptation uses this paired supervision to fine-tune only the decoder, with the encoder and generative model frozen and no additional inference cost.</p>
         </div>
 
+        <p class="adaptation-setup">We compare DA w/o CFG, trained for 10 epochs on GAR latents constructed without classifier-free guidance (CFG), with CFG-aware DA, trained for one epoch on GAR latents constructed with CFG. In both settings, only the decoder is updated.</p>
+
         <div class="table-block dark-table">
-          <div class="table-heading"><span>Table 2</span><h3>Effect of decoder adaptation on gFID</h3></div>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>Protocol / setting</th><th>B/2 w/o CFG</th><th>M/2 w/o CFG</th><th>L/2 w/o CFG</th><th>XL/2 w/o CFG</th><th>B/2 w/ CFG</th><th>M/2 w/ CFG</th><th>L/2 w/ CFG</th><th>XL/2 w/ CFG</th></tr></thead>
+          <div class="table-heading"><span>Table 2</span><h3 id="adaptation-table-title">Effect of decoder adaptation on gFID</h3></div>
+          <div class="table-scroll" role="region" aria-labelledby="adaptation-table-title" tabindex="0">
+            <table aria-labelledby="adaptation-table-title" aria-describedby="adaptation-table-note">
+              <thead>
+                <tr><th rowspan="2" scope="col">Protocol / adaptation setting</th><th colspan="4" scope="colgroup">gFID w/o CFG ↓</th><th colspan="4" scope="colgroup">gFID w/ CFG ↓</th></tr>
+                <tr><th scope="col">iMF-B/2</th><th scope="col">iMF-M/2</th><th scope="col">iMF-L/2</th><th scope="col">iMF-XL/2</th><th scope="col">iMF-B/2</th><th scope="col">iMF-M/2</th><th scope="col">iMF-L/2</th><th scope="col">iMF-XL/2</th></tr>
+              </thead>
               <tbody>
-                <tr><th>Official iMF, without DA<sup>‡</sup></th><td>16.58</td><td>11.92</td><td>9.28</td><td>9.78</td><td>3.37</td><td>2.27</td><td>1.86</td><td>1.73</td></tr>
-                <tr class="best-row"><th>Official iMF, with DA<sup>‡</sup></th><td class="gain-cell"><span>12.21</span><small>↓4.37</small></td><td class="gain-cell"><span>9.52</span><small>↓2.40</small></td><td class="gain-cell"><span>7.34</span><small>↓1.94</small></td><td class="gain-cell"><span>7.47</span><small>↓2.31</small></td><td class="gain-cell"><span>2.90</span><small>↓0.47</small></td><td class="gain-cell"><span>2.12</span><small>↓0.15</small></td><td class="gain-cell"><span>1.65</span><small>↓0.21</small></td><td class="gain-cell"><span>1.56</span><small>↓0.17</small></td></tr>
-                <tr><th>OpenAI, without DA<sup>★</sup></th><td>16.41</td><td>11.92</td><td>9.26</td><td>9.41</td><td>3.47</td><td>2.40</td><td>1.90</td><td>1.80</td></tr>
-                <tr class="best-row"><th>OpenAI, with DA<sup>★</sup></th><td class="gain-cell"><span>12.41</span><small>↓4.00</small></td><td class="gain-cell"><span>9.66</span><small>↓2.26</small></td><td class="gain-cell"><span>7.41</span><small>↓1.85</small></td><td class="gain-cell"><span>7.61</span><small>↓1.80</small></td><td class="gain-cell"><span>3.12</span><small>↓0.35</small></td><td class="gain-cell"><span>2.30</span><small>↓0.10</small></td><td class="gain-cell"><span>1.80</span><small>↓0.10</small></td><td class="gain-cell"><span>1.73</span><small>↓0.07</small></td></tr>
+                <tr class="baseline-row"><th scope="row"><span class="protocol-label">Reported iMF</span>Without DA<sup>†</sup></th><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td>3.39</td><td>2.27</td><td>1.86</td><td>1.72</td></tr>
+                <tr class="baseline-row protocol-start"><th scope="row"><span class="protocol-label">Official iMF</span>Without DA<sup>‡</sup></th><td>16.58</td><td>11.92</td><td>9.28</td><td>9.78</td><td>3.37</td><td>2.27</td><td>1.86</td><td>1.73</td></tr>
+                <tr class="best-row"><th scope="row"><span class="protocol-label">Official iMF</span>DA w/o CFG (10 epochs)<sup>‡</sup></th><td class="gain-cell"><span>12.21</span><small>↓4.37</small></td><td class="gain-cell"><span>9.52</span><small>↓2.40</small></td><td class="gain-cell"><span>7.34</span><small>↓1.94</small></td><td class="gain-cell"><span>7.47</span><small>↓2.31</small></td><td class="gain-cell"><span>2.90</span><small>↓0.47</small></td><td class="gain-cell"><span>2.12</span><small>↓0.15</small></td><td class="gain-cell"><span>1.65</span><small>↓0.21</small></td><td class="gain-cell"><span>1.56</span><small>↓0.17</small></td></tr>
+                <tr class="best-row cfg-aware-row"><th scope="row"><span class="protocol-label">Official iMF</span>CFG-aware DA (1 epoch)<sup>‡</sup></th><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="gain-cell"><span>2.81</span><small>↓0.56</small></td><td class="gain-cell"><span>1.98</span><small>↓0.29</small></td><td class="gain-cell"><span>1.58</span><small>↓0.28</small></td><td class="gain-cell"><span>1.50</span><small>↓0.23</small></td></tr>
+                <tr class="baseline-row protocol-start"><th scope="row"><span class="protocol-label">OpenAI</span>Without DA<sup>★</sup></th><td>16.41</td><td>11.92</td><td>9.26</td><td>9.41</td><td>3.47</td><td>2.40</td><td>1.90</td><td>1.80</td></tr>
+                <tr class="best-row"><th scope="row"><span class="protocol-label">OpenAI</span>DA w/o CFG (10 epochs)<sup>★</sup></th><td class="gain-cell"><span>12.41</span><small>↓4.00</small></td><td class="gain-cell"><span>9.66</span><small>↓2.26</small></td><td class="gain-cell"><span>7.41</span><small>↓1.85</small></td><td class="gain-cell"><span>7.61</span><small>↓1.80</small></td><td class="gain-cell"><span>3.12</span><small>↓0.35</small></td><td class="gain-cell"><span>2.30</span><small>↓0.10</small></td><td class="gain-cell"><span>1.80</span><small>↓0.10</small></td><td class="gain-cell"><span>1.73</span><small>↓0.07</small></td></tr>
+                <tr class="best-row cfg-aware-row"><th scope="row"><span class="protocol-label">OpenAI</span>CFG-aware DA (1 epoch)<sup>★</sup></th><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="unreported" aria-label="Not reported">—</td><td class="gain-cell"><span>3.01</span><small>↓0.46</small></td><td class="gain-cell"><span>2.19</span><small>↓0.21</small></td><td class="gain-cell"><span>1.70</span><small>↓0.20</small></td><td class="gain-cell"><span>1.61</span><small>↓0.19</small></td></tr>
               </tbody>
             </table>
           </div>
-          <p class="table-note">Lower gFID is better. ‡ denotes our reproduction with the official iMF protocol; ★ denotes our reproduction with the OpenAI protocol.</p>
+          <p class="table-note" id="adaptation-table-note">Lower gFID is better. † denotes results reported in iMF; ‡ denotes our reproduction with the official iMF protocol; ★ denotes our reproduction with the OpenAI protocol. ↓ shows the reduction from the corresponding protocol's reproduced baseline without DA. — denotes results not reported in the paper. Column groups indicate CFG at evaluation; row labels indicate CFG during adaptation.</p>
         </div>
 
-        <p class="result-readout light-readout">Decoder adaptation improves every model scale under both protocols. The largest OpenAI-protocol gain reduces iMF-B/2 gFID without CFG from 16.41 to 12.41.</p>
+        <p class="result-readout light-readout">One epoch of CFG-aware DA outperforms 10 epochs of DA w/o CFG on guided generation at every tested iMF scale under both protocols. For iMF-XL/2, guided gFID improves from 1.73 to 1.50 under the official iMF protocol and from 1.80 to 1.61 under the OpenAI protocol, with no additional inference cost.</p>
+        <p class="adaptation-setup generalization-readout">The same one-epoch CFG-aware adaptation also improves MeanFlow-XL/2 from 3.43 to 2.96 and DMF-XL/2+ from 2.16 to 1.90 under the official iMF evaluation protocol.</p>
 
         <div class="gallery-head">
           <span>Qualitative comparison</span>
@@ -193,7 +200,7 @@
         <li><span class="takeaway-text">Reconstruction and generation use the same decoder under different latent distributions, P<sub>e</sub> and P<sub>g</sub>, helping explain their performance discrepancy.</span></li>
         <li><span class="takeaway-text">GAR constructs and probes intermediate distributions P<sub>g</sub><sup>t</sup>, making decoder behavior along the reconstruction–generation transition observable and diagnosable.</span></li>
         <li><span class="takeaway-text">GAR-FID provides a trajectory-based diagnostic with strong empirical correlation with gFID near the generation endpoint across the evaluated tokenizers and generator scales.</span></li>
-        <li><span class="takeaway-text">Intermediate GAR latents retain source correspondence, enabling paired supervision for decoder adaptation that improves gFID at every tested iMF scale without additional inference cost.</span></li>
+        <li><span class="takeaway-text">Intermediate GAR latents retain source correspondence, enabling paired supervision for decoder adaptation. One epoch of CFG-aware adaptation improves guided gFID at every tested iMF scale without additional inference cost.</span></li>
       </ol>
     </section>
 
@@ -204,10 +211,10 @@
           <h2>Build on our work</h2>
           <a href="https://github.com/sunset-clouds/Generation-Aware-Reconstruction" target="_blank" rel="noopener noreferrer">View code ↗</a>
         </div>
-        <pre><code id="bibtex-code">@article{fang2026bridging,
-  title   = {Bridging Reconstruction and Generation: A Latent Distribution Perspective on Evaluation and Improvement},
+        <pre><code id="bibtex-code">@article{fang2026latent,
+  title   = {A Latent Distribution Perspective on Evaluating and Improving Latent Generative Models},
   author  = {Fang, Xianghong and Shu, Wenjie and Xu, Tongda and Mou, Wenlong and Kong, Dehan and Rudner, Tim G. J.},
-  journal = {Arxiv},
+  journal = {arXiv},
   year    = {2026}
 }</code></pre>
         <button class="copy-button" id="copy-bibtex" type="button">Copy BibTeX</button>
