@@ -91,7 +91,16 @@ We compare two decoder adaptation (DA) settings: **DA w/o CFG**, trained for **1
 
 All baselines above are our reproductions under the respective protocols. CFG-aware DA results without CFG are not reported in the paper. CFG in the table headings refers to evaluation; CFG in the adaptation labels refers to GAR construction during training. Compare results within the same evaluation protocol.
 
-One epoch of CFG-aware DA outperforms 10 epochs of DA w/o CFG on guided generation at every tested iMF scale under both protocols. The same one-epoch setting also improves MeanFlow-XL/2 from **3.43 to 2.96** and DMF-XL/2+ from **2.16 to 1.90** under the official iMF evaluation protocol.
+One epoch of CFG-aware DA outperforms 10 epochs of DA w/o CFG on guided generation at every tested iMF scale under both protocols.
+
+**Generalization beyond iMF**
+
+The same one-epoch CFG-aware DA improves both MeanFlow and the distillation-based DMF. Results below use the **official iMF evaluation protocol** with CFG; lower gFID is better. Adapted decoder checkpoints for these models will also be provided in the [Hugging Face checkpoint repository](https://huggingface.co/sunset-clouds/GAR/tree/main).
+
+| Model | Without DA | CFG-aware DA (1 epoch) | gFID reduction |
+|:--|--:|--:|--:|
+| MeanFlow-XL/2 | 3.43 | **2.96** | 0.47 |
+| DMF-XL/2+ | 2.16 | **1.90** | 0.26 |
 
 <p align="center">
   <a href="docs/assets/class_014_indigo_bunting.pdf">
