@@ -7,11 +7,11 @@
 [![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b.svg)](docs/assets/GAR_paper.pdf)
 [![Checkpoints](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Checkpoints-ffd21e.svg)](https://huggingface.co/sunset-clouds/GAR/tree/main)
 
-**[Xianghong Fang](https://sunset-clouds.github.io/)<sup>1,*</sup> · Wenjie Shu<sup>1,*</sup> · Tongda Xu<sup>2</sup> · Wenlong Mou<sup>1</sup> · Dehan Kong<sup>1</sup> · Tim G. J. Rudner<sup>1,3</sup>**
+**[Xianghong Fang](https://sunset-clouds.github.io/)<sup>1,&#42;</sup> · Wenjie Shu<sup>1,&#42;</sup> · Tongda Xu<sup>2</sup> · Wenlong Mou<sup>1</sup> · Dehan Kong<sup>1</sup> · Tim G. J. Rudner<sup>1,3</sup>**
 
 <sup>1</sup>University of Toronto &nbsp;&nbsp; <sup>2</sup>Independent &nbsp;&nbsp; <sup>3</sup>Vijil
 
-<sup>*</sup>Equal contribution
+<sup>&#42;</sup>Equal contribution
 
 </div>
 
