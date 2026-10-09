@@ -203,7 +203,8 @@ def evaluate_mode(
 def main():
     parser = argparse.ArgumentParser(description="Evaluate PSNR/SSIM/LPIPS for reconstruction modes.")
     parser.add_argument("--model_type", type=str, required=True, choices=["iMF-B-2", "iMF-M-2", "iMF-L-2", "iMF-XL-2"])
-    parser.add_argument("--pretrained_imf_pytorch", type=str, required=True)
+    parser.add_argument("--pretrained_imf_pytorch", type=str, required=True,
+                        help="Path to an official iMF .pth checkpoint")
     parser.add_argument("--pretrained_decoder", type=str, default="",
                         help="Optional post-trained decoder checkpoint.")
     parser.add_argument("--dataset_dir", type=str, required=True)

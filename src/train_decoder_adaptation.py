@@ -22,7 +22,7 @@ Pipeline:
 Usage:
     torchrun --nproc_per_node=4 src/train_decoder_adaptation.py \
         --model_type iMF-B-2 \
-        --pretrained_imf_pytorch /path/to/checkpoint.pt \
+        --pretrained_imf_pytorch /path/to/checkpoint.pth \
         --dataset_dir /path/to/imagenet
 """
 

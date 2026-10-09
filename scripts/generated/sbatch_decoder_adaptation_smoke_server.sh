@@ -15,7 +15,7 @@ BASE_DIR=${BASE_DIR:-${HOME}/garfid_data}
 PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
 VENV_DIR=${VENV_DIR:-${HOME}/.venvs/garfid}
 DATASET_ROOT=${DATASET_ROOT:-${BASE_DIR}/dataset/imagenet_idx}
-IMF_CKPT=${IMF_CKPT:-${BASE_DIR}/IMF-GAP_V1/checkpoints/pytorch/iMF-B-2.pt}
+IMF_CKPT=${IMF_CKPT:-${BASE_DIR}/IMF-GAP_V1/checkpoints/pytorch/iMF-B-2.pth}
 LPIPS_VGG_CKPT=${LPIPS_VGG_CKPT:-${BASE_DIR}/IMF-GAP_V1/models/cache/vgg.pth}
 OUT_ROOT=${OUT_ROOT:-${PROJECT_DIR}/results/server_smoke/decoder_adaptation_b2_${SLURM_JOB_ID:-manual}}
 

@@ -72,8 +72,6 @@ from scripts.imagenet_dir_label_map import DEFAULT_LABEL_MAP_JSON
 from scripts.imagenet_val_labeled_dataset import PairedImageNetDataset
 
 from models.model import TokenizerFlowComposition
-from models.diffusion_pytorch import DiffusionModelPyTorch
-from models.tokenizer import Tokenizer
 
 ALL_MODES = [
     'vanilla_rfid',
@@ -319,7 +317,7 @@ def main():
     parser.add_argument('--model_type', type=str, default='iMF-B-2',
                         choices=['iMF-B-2', 'iMF-M-2', 'iMF-L-2', 'iMF-XL-2'])
     parser.add_argument('--pretrained_imf_pytorch', type=str, required=True,
-                        help='Path to PyTorch iMF checkpoint')
+                        help='Path to an official iMF .pth checkpoint')
     parser.add_argument('--pretrained_decoder', type=str, default=None,
                         help='Path to post-trained decoder checkpoint')
     parser.add_argument('--dataset_dir', type=str, default=None,

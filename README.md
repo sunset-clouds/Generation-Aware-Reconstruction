@@ -149,7 +149,6 @@ src/
 third_party/ifid/                       # Minimal iFID/SiT runtime
 requirements.txt                       # PyTorch runtime dependencies
 requirements-fid.txt                   # Separate TensorFlow FID environment
-requirements-jax-conversion.txt        # Optional legacy checkpoint conversion
 ```
 
 ## Setup
@@ -170,7 +169,7 @@ pip install -r third_party/ifid/requirements.txt
 export PYTHONPATH=src:third_party/ifid:${PYTHONPATH:-}
 ```
 
-decoder adaptation runs in PyTorch. JAX/Flax is only needed for optional conversion of legacy checkpoints, using `requirements-jax-conversion.txt` and [`scripts/convert_imf_checkpoint.sh`](scripts/convert_imf_checkpoint.sh).
+Decoder adaptation and iMF evaluation use the official PyTorch `.pth` checkpoints.
 
 ### Checkpoints
 
@@ -279,11 +278,12 @@ and reconstruction validation; the encoder and generator remain frozen.
 CFG parameters default to the selected model's registry values. Override training
 CFG with `--omega`, `--t_min`, and `--t_max`; generation evaluation has separate
 `--cfg_omega`, `--cfg_t_min`, and `--cfg_t_max` options.
-Both official `.pth` and converted `.pt` iMF checkpoints support adaptation.
-Use official `.pth` checkpoints for paper reproduction. The legacy converted
-`.pt` backend is retained for compatibility: its CFG sampler applies external
-conditional/unconditional mixing, whereas the official backend predicts the
-guided update directly. The two sampling paths are not numerically equivalent.
+Training and evaluation require official iMF `.pth` checkpoints and use the same
+official sampling implementation. Legacy JAX-converted `.pt` checkpoints are
+unsupported; download an official `.pth` checkpoint instead of renaming a `.pt`
+file. Adapted decoder checkpoints retain their existing `.pth.tar` format.
+Existing decoder weights can still be loaded with `--pretrained_decoder`.
+Full training resume requires a checkpoint saved with the official iMF backend.
 The new default run prefix adds `_CFG` for CFG-aware adaptation.
 
 CPU regression checks can run with PyTorch, Torchvision, Diffusers, NumPy, PyYAML,
@@ -297,7 +297,7 @@ python test_runtime_contract.py
 These checks use small real iMF networks and a locally initialized VAE, without
 downloading weights or ImageNet. They cover CFG routing, GAR noise construction,
 decoder gradients, checkpoint restoration, and adapted decoder weights in the
-generation entrypoint's NPZ output for both backends. Full pretrained CUDA/DDP
+generation entrypoint's NPZ output using the official backend. Full pretrained CUDA/DDP
 training and FID evaluation require separate GPU validation.
 
 ### Evaluate the adapted decoder

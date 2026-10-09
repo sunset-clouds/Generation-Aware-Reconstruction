@@ -4,10 +4,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
-JAX_ROOTS = {
-    SRC / "tools" / "convert_jax_to_pytorch.py",
-    *(SRC / "tools" / "jax_conversion").glob("*.py"),
-}
 
 
 def imported_roots(path):
@@ -21,11 +17,9 @@ def imported_roots(path):
     return roots
 
 
-def test_jax_is_confined_to_checkpoint_conversion():
+def test_jax_is_not_a_dependency():
     offenders = []
     for path in SRC.rglob("*.py"):
-        if path in JAX_ROOTS:
-            continue
         forbidden = imported_roots(path) & {"jax", "flax", "orbax", "optax"}
         if forbidden:
             offenders.append((path.relative_to(ROOT), sorted(forbidden)))
@@ -58,7 +52,7 @@ def test_nocfg_reconstruction_emits_one_batch():
 
 
 if __name__ == "__main__":
-    test_jax_is_confined_to_checkpoint_conversion()
+    test_jax_is_not_a_dependency()
     test_decoder_adaptation_uses_canonical_loss_module()
     test_nocfg_reconstruction_emits_one_batch()
     print("runtime contract ok")

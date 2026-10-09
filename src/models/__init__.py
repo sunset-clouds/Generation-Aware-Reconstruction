@@ -2,18 +2,17 @@
 Models for generation-aware reconstruction and decoder adaptation.
 
 Structure follows the GAR-FID training convention:
-- diffusion_pytorch.py / imf_official.py: frozen iMF wrappers
+- imf_official.py: frozen official iMF .pth wrapper
 - tokenizer.py: Tokenizer (VAE with trainable decoder)
 - model.py: TokenizerFlowComposition (integrates diffusion + tokenizer)
 - losses.py: PostTrainingLoss (discriminator + losses)
 
 For training:
     from models import get_model, get_post_training_loss
-    model = get_model()(args, device)
+    model = get_model()(args)
     loss_fn = get_post_training_loss()(args)
 
-JAX is not a runtime backend. Legacy Flax checkpoints can be converted with
-``src/tools/convert_jax_to_pytorch.py`` before training or evaluation.
+Training and evaluation require official iMF .pth checkpoints.
 """
 
 def get_tokenizer():

@@ -1,1 +1,1 @@
-"""PyTorch iMF backends for official and converted checkpoints."""
+"""Official PyTorch iMF architecture for .pth checkpoints."""

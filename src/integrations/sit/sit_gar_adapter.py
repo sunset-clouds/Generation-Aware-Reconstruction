@@ -6,7 +6,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from models.diffusion_pytorch import DiffusionInterface
+from models.diffusion_interface import DiffusionInterface
 
 from .sit_checkpoint_loader import SitCheckpointBundle, SitCheckpointLoader
 

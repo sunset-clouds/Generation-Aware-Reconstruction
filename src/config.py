@@ -4,7 +4,7 @@ import argparse
 
 import numpy as np
 import torch
-from models.imf_torch.registry import model_defaults
+from models.imf_torch.registry import model_defaults, validate_imf_checkpoint_path
 
 try:
     import ruamel.yaml as yaml
@@ -127,7 +127,7 @@ def parse_arg():
     parser.add_argument('--yaml_dir', default="./yaml/", type=str,
                         help='directory for saving yaml file')
     parser.add_argument('--pretrained_imf_pytorch', default="", type=str,
-                        help='path to official or converted iMF PyTorch checkpoint')
+                        help='path to an official iMF .pth checkpoint')
     parser.add_argument('--pretrained_decoder', default="", type=str,
                         help='path to post-trained decoder checkpoint (for evaluation)')
 
@@ -158,6 +158,11 @@ def parse_arg():
 
     if not args.pretrained_imf_pytorch and not args._skip_diffusion_load and not args.debug_mode:
         parser.error('--pretrained_imf_pytorch is required unless diffusion loading is disabled')
+    if args.pretrained_imf_pytorch:
+        try:
+            validate_imf_checkpoint_path(args.pretrained_imf_pytorch)
+        except ValueError as error:
+            parser.error(str(error))
     if not 0.0 <= args.minimum_noise_level <= args.maximum_noise_level <= 1.0:
         parser.error('require 0 <= minimum_noise_level <= maximum_noise_level <= 1')
     if args.eval_epochs <= 0:

@@ -38,8 +38,7 @@ class TokenizerFlowComposition(nn.Module):
     - Tokenizer (VAE): encoder (frozen) + decoder (trainable)
     - DiffusionModel (iMF): frozen, used for denoising
     
-    Decoder adaptation uses only PyTorch iMF checkpoints. JAX support is isolated in the
-    offline checkpoint conversion tool.
+    Decoder adaptation and evaluation use official iMF .pth checkpoints.
     """
     
     def __init__(self, args):
@@ -67,23 +66,15 @@ class TokenizerFlowComposition(nn.Module):
             ckpt_path = getattr(args, 'pretrained_imf_pytorch', '')
             if not ckpt_path:
                 raise ValueError("pretrained_imf_pytorch is required for decoder adaptation")
-            use_official = ckpt_path.endswith('.pth')
-            if use_official:
-                from models.imf_official import OfficialImfWrapper
-                from models.vae_wrapper import VAEWrapper
-                imf_torch_path = getattr(args, 'imf_torch_path', None)
-                print("[TokenizerFlowComposition] Using official iMeanFlow (.pth)")
-                self.diffusion_pytorch = OfficialImfWrapper(
-                    args.model_type, ckpt_path, imf_torch_path
-                )
-                vae_type = getattr(args, 'vae_type', 'mse')
-                self.vae_wrapper = VAEWrapper(decode_batch_size=64, vae_type=vae_type)
-            else:
-                from models.diffusion_pytorch import DiffusionModelPyTorch
-                self.vae_wrapper = None
-                print("[TokenizerFlowComposition] Using JAX-converted PyTorch iMF (.pt)")
-                self.diffusion_pytorch = DiffusionModelPyTorch(args)
-                self.diffusion_pytorch.load()
+            from models.imf_official import OfficialImfWrapper
+            from models.vae_wrapper import VAEWrapper
+            imf_torch_path = getattr(args, 'imf_torch_path', None)
+            print("[TokenizerFlowComposition] Using official iMeanFlow (.pth)")
+            self.diffusion_pytorch = OfficialImfWrapper(
+                args.model_type, ckpt_path, imf_torch_path
+            )
+            vae_type = getattr(args, 'vae_type', 'mse')
+            self.vae_wrapper = VAEWrapper(decode_batch_size=64, vae_type=vae_type)
             # Training uses omega/t_min/t_max; evaluation uses cfg_* overrides.
             for attr, override in (('omega', 'cfg_omega'), ('t_min', 'cfg_t_min'),
                                    ('t_max', 'cfg_t_max')):
@@ -126,7 +117,7 @@ class TokenizerFlowComposition(nn.Module):
         return self
 
     def decode_latent(self, z):
-        """Decode latent to image. Uses VAEWrapper when .pth for FID consistency."""
+        """Decode with the official evaluation VAE, or the tokenizer in debug mode."""
         if getattr(self, 'vae_wrapper', None) is not None:
             return self.vae_wrapper.decode(z).clamp(-1, 1)
         return self.tokenizer.decode(z).clamp(-1, 1)

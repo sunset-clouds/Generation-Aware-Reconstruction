@@ -18,7 +18,6 @@ the new ones; the Slurm compatibility scripts retain their scheduler directives.
 | `scripts/stage2_smoke_test.sh` | `scripts/smoke_test_garfid.sh` |
 | `scripts/stage3_train_decoder_adaptation.sh` | `scripts/train_decoder_adaptation.sh` |
 | `scripts/stage3_evaluate_posttrained_decoder.sh` | `scripts/evaluate_decoder.sh` |
-| `scripts/stage3_convert_imf_checkpoint.sh` | `scripts/convert_imf_checkpoint.sh` |
 | `scripts/stage3_download_hf_checkpoint.sh` | `scripts/download_hf_checkpoint.sh` |
 | `scripts/generated/sbatch_stage2_smoke_server.sh` | `scripts/generated/sbatch_garfid_smoke_server.sh` |
 | `scripts/generated/sbatch_stage3_smoke_server.sh` | `scripts/generated/sbatch_decoder_adaptation_smoke_server.sh` |
@@ -36,9 +35,21 @@ New result JSON keys and reconstruction-metric CSV mode values use the canonical
 
 Sample NPZ names (`Denoising_t*.npz`, `VAE_reconstruction.npz`, and
 `Generated_*.npz`) are unchanged, so existing samples can be evaluated again.
-Checkpoint state keys, loading, and resume behavior are unchanged.
+Official-backend checkpoint state keys, loading, and resume behavior are unchanged.
 New default training filenames use the prefix `GAR_Decoder_Adaptation_`;
 use `--saver_name_pre` to retain a custom filename prefix.
+
+## iMF checkpoints
+
+iMF training and evaluation now require official `.pth` checkpoints. The legacy
+converted `.pt` backend, JAX conversion tools, and both checkpoint-conversion
+shell entrypoints have been removed. Download an official `.pth` checkpoint;
+renaming a converted `.pt` file does not convert its architecture or weights.
+Adapted decoder checkpoints still use `.pth.tar` and the same state keys.
+Existing tokenizer/decoder weights remain loadable through `--pretrained_decoder`,
+including checkpoints trained with the removed backend. Full training resume
+requires a checkpoint saved with the official backend.
+SiT GAR-FID checkpoints keep their original format.
 
 ## SiT assets
 

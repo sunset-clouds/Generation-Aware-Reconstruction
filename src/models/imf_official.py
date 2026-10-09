@@ -2,14 +2,14 @@
 Wrapper for official iMeanFlow PyTorch model (.pth checkpoint).
 
 Uses imeantflow-torch's iMeanFlow and matches the evaluate.py interface.
-Provides the same API as DiffusionModelPyTorch for generate_eval_images.py.
+Provides the frozen iMF backend for decoder adaptation and evaluation.
 """
 
 from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-from models.imf_torch.registry import model_defaults
+from models.imf_torch.registry import model_defaults, validate_imf_checkpoint_path
 
 
 # Model name mapping: iMF-B-2 -> imfDiT_B_2
@@ -47,11 +47,12 @@ class BatchGenerator:
 
 class OfficialImfWrapper(nn.Module):
     """
-    Wrapper for official iMeanFlow (.pth) providing DiffusionInterface-compatible API.
+    Wrapper for official iMeanFlow (.pth) used by GAR training and evaluation.
     """
 
     def __init__(self, model_type: str, checkpoint_path: str, imf_torch_path: Optional[str] = None):
         super().__init__()
+        validate_imf_checkpoint_path(checkpoint_path)
         self.model_type = model_type
         self.checkpoint_path = checkpoint_path
         self.latent_size = 32
@@ -169,8 +170,8 @@ class OfficialImfWrapper(nn.Module):
     ) -> torch.Tensor:
         """Construct GAR latents from normalized encoder latents in NCHW format.
 
-        Matches the converted PyTorch backend: one noise level per batch, followed
-        by flow interpolation and partial denoising with the frozen generator.
+        Samples one noise level per batch, followed by flow interpolation and
+        partial denoising with the frozen generator.
         """
         if not 0.0 <= minimum_noise_level <= maximum_noise_level <= 1.0:
             raise ValueError("require 0 <= minimum_noise_level <= maximum_noise_level <= 1")

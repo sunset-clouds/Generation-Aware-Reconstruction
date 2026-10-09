@@ -11,3 +11,8 @@ def model_defaults(model_type):
         return MODEL_DEFAULTS[model_type].copy()
     except KeyError as exc:
         raise ValueError(f"Unsupported iMF model: {model_type}") from exc
+
+
+def validate_imf_checkpoint_path(path):
+    if not str(path).endswith(".pth"):
+        raise ValueError("iMF requires an official .pth checkpoint; legacy converted .pt checkpoints are unsupported")
