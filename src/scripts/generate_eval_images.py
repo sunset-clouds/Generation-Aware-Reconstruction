@@ -429,12 +429,17 @@ def main():
                 tokenizer_state_dict[k] = v
 
         model_state = model.state_dict()
+        loaded = 0
         for k, v in tokenizer_state_dict.items():
             if k in model_state:
                 model_state[k] = v
+                if k.startswith('tokenizer.vae.decoder.'):
+                    loaded += 1
+        if loaded == 0:
+            raise ValueError('Checkpoint contains no matching tokenizer.vae.decoder.* weights')
         model.load_state_dict(model_state)
         model.sync_eval_decoder()
-        print_main(f"Loaded {len(tokenizer_state_dict)} tokenizer weights")
+        print_main(f"Loaded {loaded} decoder weights")
 
     model = model.to(device)
     model.eval()

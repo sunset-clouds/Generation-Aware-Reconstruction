@@ -7,7 +7,7 @@
 [![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b.svg)](docs/assets/GAR_paper.pdf)
 [![Checkpoints](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Checkpoints-ffd21e.svg)](https://huggingface.co/sunset-clouds/GAR/tree/main)
 
-**[Xianghong Fang](https://sunset-clouds.github.io/)<sup>1,&#42;</sup> · Wenjie Shu<sup>1,&#42;</sup> · Tongda Xu<sup>2</sup> · Wenlong Mou<sup>1</sup> · Dehan Kong<sup>1</sup> · Tim G. J. Rudner<sup>1,3</sup>**
+**[Xianghong Fang](https://sunset-clouds.github.io/)<sup>1,&#42;</sup> · [Wenjie Shu](https://wenjieshu.github.io/)<sup>1,&#42;</sup> · Tongda Xu<sup>2</sup> · Wenlong Mou<sup>1</sup> · Dehan Kong<sup>1</sup> · Tim G. J. Rudner<sup>1,3</sup>**
 
 <sup>1</sup>University of Toronto &nbsp;&nbsp; <sup>2</sup>Independent &nbsp;&nbsp; <sup>3</sup>Vijil
 
@@ -183,7 +183,7 @@ hf download sunset-clouds/GAR --local-dir assets/checkpoints/GAR
 Set `IMF_CKPT` to the pretrained iMF PyTorch checkpoint and `DECODER_CKPT` to the adapted decoder checkpoint selected for evaluation. Both must match the model scale; the examples below use iMF-B/2.
 
 ```bash
-export IMF_CKPT=/path/to/iMF-B-2.pt
+export IMF_CKPT=/path/to/iMF-B-2.pth
 export DECODER_CKPT=/path/to/decoder_adapted_checkpoint.pth.tar
 ```
 
@@ -280,6 +280,10 @@ CFG parameters default to the selected model's registry values. Override trainin
 CFG with `--omega`, `--t_min`, and `--t_max`; generation evaluation has separate
 `--cfg_omega`, `--cfg_t_min`, and `--cfg_t_max` options.
 Both official `.pth` and converted `.pt` iMF checkpoints support adaptation.
+Use official `.pth` checkpoints for paper reproduction. The legacy converted
+`.pt` backend is retained for compatibility: its CFG sampler applies external
+conditional/unconditional mixing, whereas the official backend predicts the
+guided update directly. The two sampling paths are not numerically equivalent.
 The new default run prefix adds `_CFG` for CFG-aware adaptation.
 
 CPU regression checks can run with PyTorch, Torchvision, Diffusers, NumPy, PyYAML,
@@ -321,7 +325,9 @@ bash scripts/evaluate_decoder.sh \
   "${FID_REFERENCE_FILE}"
 ```
 
-This example evaluates generation with CFG. Use the model-specific guidance settings for each scale when reproducing the paper's results.
+This example evaluates generation with CFG. By default, the wrapper uses the
+selected model's registry guidance settings. Set `CFG_OMEGA`, `CFG_T_MIN`, and
+`CFG_T_MAX` only to override them; provide both interval endpoints together.
 
 ## Evaluation and Outputs
 

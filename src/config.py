@@ -97,7 +97,7 @@ def parse_arg():
     parser.add_argument('--weight_decay', type=float, default=0.0001,
                         help='weight decay for optimizer')
     parser.add_argument('--eval_epochs', type=int, default=1,
-                        help='epochs between evaluations (0 = every epoch)')
+                        help='positive number of epochs between evaluations (1 = every epoch)')
     parser.add_argument('--resume', default='', type=str,
                         help='path to a post-training checkpoint to resume from')
     parser.add_argument('--max_train_steps', type=int, default=0,

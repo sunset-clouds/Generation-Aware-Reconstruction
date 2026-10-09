@@ -256,6 +256,24 @@ class DecoderAdaptationTests(unittest.TestCase):
                     expected = np.broadcast_to(np.array([159, 64, 223], dtype=np.uint8), images.shape)
                     np.testing.assert_array_equal(images, expected)
 
+    def test_generation_entrypoint_rejects_checkpoint_without_decoder(self):
+        env = {key: value for key, value in os.environ.items()
+               if key not in ("RANK", "WORLD_SIZE", "LOCAL_RANK")}
+        checkpoint = self.root / "encoder_only.pth.tar"
+        torch.save({"model": {"tokenizer.mean": torch.zeros(1, 4, 1, 1)}}, checkpoint)
+        for suffix in (".pt", ".pth"):
+            with self.subTest(suffix=suffix):
+                argv = [
+                    "generate_eval_images", "--pretrained_imf_pytorch",
+                    str(self.root / ("imf" + suffix)), "--pretrained_decoder", str(checkpoint),
+                    "--output_dir", str(self.root / "invalid"), "--modes", "gfid_cfg",
+                ]
+                with patch.object(sys, "argv", argv), patch.dict(os.environ, env, clear=True), \
+                        patch.object(torch.cuda, "is_available", return_value=False), \
+                        contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaisesRegex(ValueError, "no matching tokenizer.vae.decoder"):
+                        generate_eval_images.main()
+
 
 if __name__ == "__main__":
     unittest.main()

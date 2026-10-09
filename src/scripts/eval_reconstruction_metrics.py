@@ -314,10 +314,13 @@ def main():
         for key, value in tokenizer_state_dict.items():
             if key in model_state:
                 model_state[key] = value
-                loaded += 1
+                if key.startswith("tokenizer.vae.decoder."):
+                    loaded += 1
+        if loaded == 0:
+            raise ValueError("Checkpoint contains no matching tokenizer.vae.decoder.* weights")
         model.load_state_dict(model_state)
         model.sync_eval_decoder()
-        print(f"Loaded {loaded} tokenizer weights")
+        print(f"Loaded {loaded} decoder weights")
 
     rows: List[Dict] = []
     for mode in modes:
