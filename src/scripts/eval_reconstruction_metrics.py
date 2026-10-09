@@ -316,6 +316,7 @@ def main():
                 model_state[key] = value
                 loaded += 1
         model.load_state_dict(model_state)
+        model.sync_eval_decoder()
         print(f"Loaded {loaded} tokenizer weights")
 
     rows: List[Dict] = []

@@ -433,6 +433,7 @@ def main():
             if k in model_state:
                 model_state[k] = v
         model.load_state_dict(model_state)
+        model.sync_eval_decoder()
         print_main(f"Loaded {len(tokenizer_state_dict)} tokenizer weights")
 
     model = model.to(device)

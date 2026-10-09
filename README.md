@@ -263,6 +263,39 @@ bash scripts/train_decoder_adaptation.sh \
 
 For other scales, change both `IMF_CKPT` and `--model_type` to the corresponding `iMF-M-2`, `iMF-L-2`, or `iMF-XL-2`. A one-step training check can use `NPROC_PER_NODE=1`, `BATCH_SIZE=1`, `NUM_WORKERS=0`, `MAX_TRAIN_STEPS=1`, and `EVAL_EPOCHS=999`.
 
+For **one-epoch CFG-aware DA**, enable CFG during GAR construction:
+
+```bash
+NPROC_PER_NODE=8 EPOCHS=1 BATCH_SIZE=32 NUM_WORKERS=8 \
+EXTRA_ARGS="--model_type iMF-B-2 --minimum_noise_level 0.25 --maximum_noise_level 0.45 --adaptation_use_cfg" \
+bash scripts/train_decoder_adaptation.sh \
+  "${IMAGENET_ROOT}" \
+  "${IMF_CKPT}" \
+  results/decoder_adaptation_cfg_imf_b2_noise025045
+```
+
+`--adaptation_use_cfg` defaults to off. It affects the GAR latents used for training
+and reconstruction validation; the encoder and generator remain frozen.
+CFG parameters default to the selected model's registry values. Override training
+CFG with `--omega`, `--t_min`, and `--t_max`; generation evaluation has separate
+`--cfg_omega`, `--cfg_t_min`, and `--cfg_t_max` options.
+Both official `.pth` and converted `.pt` iMF checkpoints support adaptation.
+The new default run prefix adds `_CFG` for CFG-aware adaptation.
+
+CPU regression checks can run with PyTorch, Torchvision, Diffusers, NumPy, PyYAML,
+and tqdm installed:
+
+```bash
+python -m unittest discover -s tests -v
+python test_runtime_contract.py
+```
+
+These checks use small real iMF networks and a locally initialized VAE, without
+downloading weights or ImageNet. They cover CFG routing, GAR noise construction,
+decoder gradients, checkpoint restoration, and adapted decoder weights in the
+generation entrypoint's NPZ output for both backends. Full pretrained CUDA/DDP
+training and FID evaluation require separate GPU validation.
+
 ### Evaluate the adapted decoder
 
 The evaluation wrapper generates samples with PyTorch and computes FID with the OpenAI TensorFlow backend. Create a separate FID environment once:

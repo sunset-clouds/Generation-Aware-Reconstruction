@@ -154,3 +154,47 @@ class OfficialImfWrapper(nn.Module):
         for i in range(num_steps):
             z_t = self.model.sample_one_step(z_t, labels, i, t_steps, omega, t_min, t_max)
         return z_t
+
+    @torch.no_grad()
+    def denoise_from_encoder_latent(
+        self,
+        z_real: torch.Tensor,
+        maximum_noise_level: float,
+        normalized: bool = False,
+        labels: Optional[torch.Tensor] = None,
+        num_steps: int = 1,
+        use_cfg: bool = False,
+        fixed_noise: bool = False,
+        minimum_noise_level: float = 0.0,
+    ) -> torch.Tensor:
+        """Construct GAR latents from normalized encoder latents in NCHW format.
+
+        Matches the converted PyTorch backend: one noise level per batch, followed
+        by flow interpolation and partial denoising with the frozen generator.
+        """
+        if not 0.0 <= minimum_noise_level <= maximum_noise_level <= 1.0:
+            raise ValueError("require 0 <= minimum_noise_level <= maximum_noise_level <= 1")
+        if num_steps < 1:
+            raise ValueError("num_steps must be positive")
+        device = z_real.device
+        if fixed_noise:
+            noise_level = float(maximum_noise_level)
+        else:
+            noise_level = minimum_noise_level + torch.rand(1, device=device).item() * (
+                maximum_noise_level - minimum_noise_level
+            )
+
+        z_noisy, _ = self.add_noise(z_real, noise_level)
+        if normalized:
+            mean = z_noisy.mean(dim=(1, 2, 3), keepdim=True)
+            std = z_noisy.std(dim=(1, 2, 3), keepdim=True)
+            z_noisy = (z_noisy - mean) / (std + 1e-8)
+        else:
+            mean = std = None
+
+        z_denoised = self.denoise(
+            z_noisy, noise_level, labels=labels, num_steps=num_steps, use_cfg=use_cfg,
+        )
+        if normalized:
+            z_denoised = z_denoised * std + mean
+        return z_denoised

@@ -84,6 +84,15 @@ class TokenizerFlowComposition(nn.Module):
                 print("[TokenizerFlowComposition] Using JAX-converted PyTorch iMF (.pt)")
                 self.diffusion_pytorch = DiffusionModelPyTorch(args)
                 self.diffusion_pytorch.load()
+            # Training uses omega/t_min/t_max; evaluation uses cfg_* overrides.
+            for attr, override in (('omega', 'cfg_omega'), ('t_min', 'cfg_t_min'),
+                                   ('t_max', 'cfg_t_max')):
+                value = getattr(args, override, None)
+                if value is None:
+                    value = getattr(args, attr, None)
+                if value is not None:
+                    setattr(self.diffusion_pytorch, attr, float(value))
+            self.diffusion_pytorch.requires_grad_(False)
             self.diffusion_pytorch.eval()
         # Tokenizer (PyTorch, decoder trainable)
         self.tokenizer = Tokenizer(args)
@@ -121,6 +130,17 @@ class TokenizerFlowComposition(nn.Module):
         if getattr(self, 'vae_wrapper', None) is not None:
             return self.vae_wrapper.decode(z).clamp(-1, 1)
         return self.tokenizer.decode(z).clamp(-1, 1)
+
+    def sync_eval_decoder(self):
+        """Copy loaded tokenizer decoder weights into the official evaluation VAE.
+
+        Keep the evaluation wrapper's channels-last layout and frozen parameters.
+        Call after loading an adapted checkpoint, before generating any samples.
+        """
+        if getattr(self, 'vae_wrapper', None) is not None:
+            self.vae_wrapper.vae.decoder.load_state_dict(
+                self.tokenizer.vae.decoder.state_dict()
+            )
     
     # ============================================================
     # Standard reconstruction (rFID baseline)
@@ -147,7 +167,7 @@ class TokenizerFlowComposition(nn.Module):
         Args:
             x: Input images, shape (B, 3, H, W) in range [-1, 1]
             labels: Class labels for conditional generation
-            use_cfg: Whether to use CFG for denoising (False for reconstruction)
+            use_cfg: Whether to use CFG while constructing GAR latents
             
         Returns:
             x_rec: Reconstructed images
@@ -192,7 +212,10 @@ class TokenizerFlowComposition(nn.Module):
             "do not use random labels for conditional denoising"
         )
         
-        return self.vae_imf_reconstruction(x, labels=labels)
+        return self.vae_imf_reconstruction(
+            x, labels=labels,
+            use_cfg=getattr(self.args, 'adaptation_use_cfg', False),
+        )
     
     def collect_eval_info(self, x, labels=None):
         """
@@ -202,7 +225,10 @@ class TokenizerFlowComposition(nn.Module):
             x_rec: Reconstructed images
             rec_loss: Reconstruction MSE loss
         """
-        x_rec = self.vae_imf_reconstruction(x, labels=labels)
+        x_rec = self.vae_imf_reconstruction(
+            x, labels=labels,
+            use_cfg=getattr(self.args, 'adaptation_use_cfg', False),
+        )
         rec_loss = F.mse_loss(x.contiguous(), x_rec.contiguous())
         return x_rec, rec_loss
     

@@ -90,6 +90,10 @@ def main_worker(args):
         print(f"Learning rate: {args.lr}")
         print(f"Maximum noise level: {args.maximum_noise_level}")
         print(f"Normalized: {args.normalized}")
+        print(f"Adaptation CFG: {args.adaptation_use_cfg}")
+        if args.adaptation_use_cfg:
+            print(f"Adaptation CFG parameters: omega={args.omega}, "
+                  f"t_min={args.t_min}, t_max={args.t_max}")
         print("=" * 70)
 
         # Initialize wandb

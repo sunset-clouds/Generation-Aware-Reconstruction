@@ -64,6 +64,9 @@ def parse_arg():
                         help='CFG interval start (auto-set if None)')
     parser.add_argument('--t_max', type=float, default=None,
                         help='CFG interval end (auto-set if None)')
+    parser.add_argument('--adaptation_use_cfg', action='store_true', default=False,
+                        help='use CFG when constructing GAR latents for decoder adaptation; '
+                             'the encoder and generator remain frozen')
 
     # ============================================================
     # Loss Hyperparameters (for training decoder)
@@ -155,6 +158,10 @@ def parse_arg():
 
     if not args.pretrained_imf_pytorch and not args._skip_diffusion_load and not args.debug_mode:
         parser.error('--pretrained_imf_pytorch is required unless diffusion loading is disabled')
+    if not 0.0 <= args.minimum_noise_level <= args.maximum_noise_level <= 1.0:
+        parser.error('require 0 <= minimum_noise_level <= maximum_noise_level <= 1')
+    if args.eval_epochs <= 0:
+        parser.error('--eval_epochs must be positive')
 
     # Handle distributed training environment variables
     args.world_size = int(os.environ.get("WORLD_SIZE", 1))
@@ -175,6 +182,8 @@ def parse_arg():
         args.t_min = cfg_defaults['t_min']
     if args.t_max is None:
         args.t_max = cfg_defaults['t_max']
+    if args.omega <= 0 or not 0.0 <= args.t_min <= args.t_max <= 1.0:
+        parser.error('require omega > 0 and 0 <= t_min <= t_max <= 1')
     
     # ============================================================
     # Create directories
@@ -188,6 +197,8 @@ def parse_arg():
             args.dataset_name, args.model_type, args.num_steps,
             args.maximum_noise_level, args.normalized
         )
+        if args.adaptation_use_cfg:
+            args.saver_name_pre += '_CFG'
 
     dict_args = vars(args)
     config_name = args.saver_name_pre+'.yaml'
