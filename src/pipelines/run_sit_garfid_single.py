@@ -19,7 +19,7 @@ SRC_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = SRC_ROOT
 WORKSPACE_ROOT = PROJECT_ROOT
-DEFAULT_IFID_REPO_ROOT = PROJECT_ROOT / "third_party" / "ifid"
+DEFAULT_IFID_REPO_ROOT = PROJECT_ROOT / "external" / "ifid"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 

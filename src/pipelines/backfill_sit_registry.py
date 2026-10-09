@@ -28,7 +28,7 @@ SERVER_IMAGENET_TRAIN_DIR = "/public/test/data/imagenet/train"
 SERVER_IMAGENET_VAL_DIR = "/public/test/data/imagenet/val"
 SERVER_LABEL_MAP_JSON = os.environ.get("LABEL_MAP_JSON", "assets/generated/imagenet_val_dir_to_index.json")
 SERVER_FID_REFERENCE_FILE = os.environ.get("FID_REFERENCE_FILE", "assets/VIRTUAL_imagenet256_labeled.npz")
-SERVER_IFID_REPO_ROOT = os.environ.get("IFID_ROOT", "third_party/ifid")
+SERVER_IFID_REPO_ROOT = os.environ.get("IFID_ROOT", "external/ifid")
 
 
 def parse_args() -> argparse.Namespace:

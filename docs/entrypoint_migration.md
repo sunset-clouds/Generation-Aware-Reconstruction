@@ -54,6 +54,9 @@ SiT GAR-FID checkpoints keep their original format.
 
 ## SiT assets
 
+The bundled iFID runtime lives in `external/ifid/`. Use this directory when
+setting `IFID_REPO_ROOT` or adding the runtime to `PYTHONPATH`.
+
 The default registry now points to `assets/sit/`. When a requested path there is
 absent, the loader and asset utilities reuse the corresponding existing path under
 `assets/stage2_assets/`. No downloaded files are moved.

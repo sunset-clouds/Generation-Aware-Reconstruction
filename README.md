@@ -146,7 +146,7 @@ src/
   train_decoder_adaptation.py           # Decoder-adaptation training
   models/                              # Tokenizer, iMF, and loss implementations
   data/, metric/, utils/                # Shared runtime utilities
-third_party/ifid/                       # Minimal iFID/SiT runtime
+external/ifid/                          # Minimal iFID/SiT runtime
 requirements.txt                       # PyTorch runtime dependencies
 requirements-fid.txt                   # Separate TensorFlow FID environment
 ```
@@ -165,8 +165,8 @@ pip install --upgrade pip
 
 # Install a CUDA-compatible PyTorch build first if needed.
 pip install -r requirements.txt
-pip install -r third_party/ifid/requirements.txt
-export PYTHONPATH=src:third_party/ifid:${PYTHONPATH:-}
+pip install -r external/ifid/requirements.txt
+export PYTHONPATH=src:external/ifid:${PYTHONPATH:-}
 ```
 
 Decoder adaptation and iMF evaluation use the official PyTorch `.pth` checkpoints.
@@ -358,4 +358,4 @@ If this work is useful for your research, please cite:
 
 ## Acknowledgements
 
-This work builds on iMF, SiT, iFID, and SD-VAE. We thank their authors and the contributors to the perceptual-metric and evaluation libraries used in this repository. The bundled iFID/SiT runtime is located in [`third_party/ifid/`](third_party/ifid/). Copyright and license headers are retained in the bundled source files. External pretrained models, datasets, and FID statistics must be obtained separately.
+This work builds on iMF, SiT, iFID, and SD-VAE. We thank their authors and the contributors to the perceptual-metric and evaluation libraries used in this repository. The bundled iFID/SiT runtime is located in [`external/ifid/`](external/ifid/). Copyright and license headers are retained in the bundled source files. External pretrained models, datasets, and FID statistics must be obtained separately.

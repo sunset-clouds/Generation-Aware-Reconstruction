@@ -10,7 +10,7 @@ params:
         dinov2_path: 'facebook/dinov2-with-registers-base'
         normalize: true
       encoder_trainable: true
-      decoder_config_path: '${oc.env:UAE_DECODER_CONFIG,./third_party/ifid/configs/uae_decoder_vitxl}'
+      decoder_config_path: '${oc.env:UAE_DECODER_CONFIG,./external/ifid/configs/uae_decoder_vitxl}'
       noise_tau: 0.8
       reshape_to_2d: true
       frequency_config:

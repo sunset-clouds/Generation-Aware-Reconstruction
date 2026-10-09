@@ -15,7 +15,7 @@ params:
     - 16
     dropout: 0.0
   dinoconfig:
-    dinov3_location: ${oc.env:DINOV3_ROOT,./third_party/dinov3}
+    dinov3_location: ${oc.env:DINOV3_ROOT,./external/dinov3}
     model_name: dinov3_vits16plus
     weights: ${oc.env:DINOV3_WEIGHTS,./assets/checkpoints/dinov3_vits16plus.pth}
   extra_vit_config:

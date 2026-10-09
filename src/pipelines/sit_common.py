@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = SRC_ROOT
 WORKSPACE_ROOT = PROJECT_ROOT
 DEFAULT_REGISTRY_PATH = PROJECT_ROOT / "assets" / "sit_checkpoint_registry_template.csv"
-DEFAULT_IFID_REPO_ROOT = PROJECT_ROOT / "third_party" / "ifid"
+DEFAULT_IFID_REPO_ROOT = PROJECT_ROOT / "external" / "ifid"
 REQUIRED_IFID_RUNTIME_FILES = (
     "ifid/sit/sit.py",
     "ifid/vae/utils.py",

@@ -16,7 +16,7 @@ set -euo pipefail
 BASE_DIR=${BASE_DIR:-${HOME}/garfid_data}
 PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
 VENV_DIR=${VENV_DIR:-${HOME}/.venvs/garfid}
-IFID_REPO=${IFID_REPO:-${PROJECT_DIR}/third_party/ifid}
+IFID_REPO=${IFID_REPO:-${PROJECT_DIR}/external/ifid}
 DATASET_VAL=${DATASET_VAL:-${BASE_DIR}/dataset/imagenet/val}
 LABEL_MAP_JSON=${LABEL_MAP_JSON:-${PROJECT_DIR}/assets/generated/imagenet_val_dir_to_index.json}
 SDVAE_CKPT=${SDVAE_CKPT:-${BASE_DIR}/vae_assets/sdvae/sdvae-f8d4.pt}

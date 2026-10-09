@@ -668,59 +668,59 @@ def _config_path(env_name, default_rel):
 
 def VAE_FLUX(**kwargs):
     return AutoencoderPIT(
-        _config_path("FLUX_VAE_CONFIG", "./third_party/ifid/configs/FLUXVAE.yaml")
+        _config_path("FLUX_VAE_CONFIG", "./external/ifid/configs/FLUXVAE.yaml")
     )
 
 
 def VAE_FLUXFlow(**kwargs):
     return AutoencoderPIT(
-        _config_path("FLUX_VAE_CONFIG", "./third_party/ifid/configs/FLUXVAE.yaml"),
+        _config_path("FLUX_VAE_CONFIG", "./external/ifid/configs/FLUXVAE.yaml"),
         use_flow=True,
     )
 
 
 def VAE_SD3(**kwargs):
-    return AutoencoderPIT(_config_path("SD3_VAE_CONFIG", "./third_party/ifid/configs/SD3VAE.yaml"))
+    return AutoencoderPIT(_config_path("SD3_VAE_CONFIG", "./external/ifid/configs/SD3VAE.yaml"))
 
 
 def VAE_QW(**kwargs):
-    return AutoencoderPIT(_config_path("QW_VAE_CONFIG", "./third_party/ifid/configs/QWVAE.yaml"))
+    return AutoencoderPIT(_config_path("QW_VAE_CONFIG", "./external/ifid/configs/QWVAE.yaml"))
 
 
 def VAE_DETOK(**kwargs):
     return AutoencoderPIT(
-        _config_path("DETOK_VAE_CONFIG", "./third_party/ifid/configs/DETOK.yaml")
+        _config_path("DETOK_VAE_CONFIG", "./external/ifid/configs/DETOK.yaml")
     )
 
 
 def VAE_SD3Flow(**kwargs):
     return AutoencoderPIT(
-        _config_path("SD3_VAE_CONFIG", "./third_party/ifid/configs/SD3VAE.yaml"),
+        _config_path("SD3_VAE_CONFIG", "./external/ifid/configs/SD3VAE.yaml"),
         use_flow=True,
     )
 
 
 def VAE_WAN(**kwargs):
     return AutoencoderPIT(
-        _config_path("WAN_VAE_CONFIG", "./third_party/ifid/configs/WAN.yaml")
+        _config_path("WAN_VAE_CONFIG", "./external/ifid/configs/WAN.yaml")
     )
 
 
 def VAE_WANFlow(**kwargs):
     return AutoencoderPIT(
-        _config_path("WAN_VAE_CONFIG", "./third_party/ifid/configs/WAN.yaml"),
+        _config_path("WAN_VAE_CONFIG", "./external/ifid/configs/WAN.yaml"),
         use_flow=True,
     )
 
 
 def VAE_DMVAE(**kwargs):
     return AutoencoderPIT(
-        _config_path("DMVAE_CONFIG", "./third_party/ifid/configs/DMVAE.yaml")
+        _config_path("DMVAE_CONFIG", "./external/ifid/configs/DMVAE.yaml")
     )
 
 
 def VAE_RAE(**kwargs):
-    return AutoencoderPIT(_config_path("RAE_CONFIG", "./third_party/ifid/configs/RAE.yaml"))
+    return AutoencoderPIT(_config_path("RAE_CONFIG", "./external/ifid/configs/RAE.yaml"))
 
 
 def VAE_SoftVQ(**kwargs):

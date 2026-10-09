@@ -9,7 +9,7 @@ OUT_DIR=${4:?usage: evaluate_garfid.sh GROUP_ID IMAGENET_VAL_DIR FID_REF_NPZ OUT
 "${PYTHON}" src/pipelines/run_sit_garfid_single.py \
   --group_id "${GROUP_ID}" \
   --registry_path "${REGISTRY_PATH:-assets/sit_checkpoint_registry_template.csv}" \
-  --ifid_repo_root "${IFID_REPO_ROOT:-third_party/ifid}" \
+  --ifid_repo_root "${IFID_REPO_ROOT:-external/ifid}" \
   --dataset_dir "${DATASET_DIR}" \
   --label_map_json "${LABEL_MAP_JSON:-assets/generated/imagenet_val_dir_to_index.json}" \
   --fid_reference_file "${FID_REFERENCE_FILE:-${FID_REF_NPZ}}" \
