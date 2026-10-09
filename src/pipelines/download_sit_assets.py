@@ -14,16 +14,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from pipelines.sit_stage2_common import (  # noqa: E402
+from pipelines.sit_common import (  # noqa: E402
     DEFAULT_REGISTRY_PATH,
     filter_rows,
     load_registry_rows,
     make_output_root,
 )
+from asset_paths import resolve_sit_asset_path  # noqa: E402
 
 
-DEFAULT_REPO_ID = os.environ.get("STAGE2_ASSET_REPO_ID", "")
-DEFAULT_STAGE2_ASSETS_ROOT = os.environ.get("STAGE2_ASSETS_ROOT", "./assets/stage2_assets")
+DEFAULT_REPO_ID = os.environ.get("SIT_ASSET_REPO_ID", os.environ.get("STAGE2_ASSET_REPO_ID", ""))
+DEFAULT_SIT_ASSETS_ROOT = os.environ.get("SIT_ASSETS_ROOT", os.environ.get("STAGE2_ASSETS_ROOT", "./assets/sit"))
 HF_SUBDIR_OVERRIDES = {
     "sit-xl-sdvae-400k": "sit-xl-sdvae-0421-400k",
     "sit-b-fluxvae-400k": "sit-b-flux-shift-400k",
@@ -45,11 +46,13 @@ HF_SUBDIR_OVERRIDES = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Download Stage 2 SiT args/checkpoints from Hugging Face according to the registry."
+        description="Download GAR-FID evaluation SiT args/checkpoints from Hugging Face according to the registry."
     )
     parser.add_argument("--registry_path", type=str, default=str(DEFAULT_REGISTRY_PATH))
     parser.add_argument("--repo_id", type=str, default=DEFAULT_REPO_ID)
-    parser.add_argument("--stage2_assets_root", type=str, default=DEFAULT_STAGE2_ASSETS_ROOT)
+    parser.add_argument("--sit_assets_root", type=str, default=DEFAULT_SIT_ASSETS_ROOT)
+    parser.add_argument("--stage2_assets_root", dest="sit_assets_root", default=argparse.SUPPRESS,
+                        help=argparse.SUPPRESS)
     parser.add_argument("--group_ids", nargs="*", default=None)
     parser.add_argument("--only_should_run", action="store_true")
     parser.add_argument("--hf_endpoint", type=str, default=os.environ.get("HF_ENDPOINT", ""))
@@ -66,12 +69,12 @@ def resolve_hf_subdir(ifid_exp_name: str) -> str:
     return HF_SUBDIR_OVERRIDES.get(ifid_exp_name, ifid_exp_name)
 
 
-def resolve_target_dir(row: Dict[str, str], stage2_assets_root: str) -> Path:
+def resolve_target_dir(row: Dict[str, str], sit_assets_root: str) -> Path:
     exp_path = str(row.get("exp_path", "")).strip()
     if exp_path:
-        return Path(exp_path).expanduser().resolve()
+        return Path(resolve_sit_asset_path(exp_path)).expanduser().resolve()
     ifid_exp_name = str(row.get("ifid_exp_name", "")).strip()
-    return (Path(stage2_assets_root) / ifid_exp_name).resolve()
+    return (Path(sit_assets_root) / ifid_exp_name).resolve()
 
 
 def resolve_checkpoint_name(row: Dict[str, str], default_ckpt_step: int) -> str:
@@ -140,7 +143,7 @@ def download_one_file(
 
 def render_markdown(summary: Dict[str, object], rows: List[Dict[str, object]]) -> str:
     lines = [
-        "# Stage2 HF Download Summary",
+        "# GAR-FID HF Download Summary",
         "",
         f"- `repo_id`: `{summary['repo_id']}`",
         f"- `rows_requested`: `{summary['rows_requested']}`",
@@ -163,7 +166,7 @@ def main() -> None:
     args = parse_args()
     if not args.repo_id:
         raise SystemExit(
-            "Missing Hugging Face repo id. Pass --repo_id or set STAGE2_ASSET_REPO_ID."
+            "Missing Hugging Face repo id. Pass --repo_id or set SIT_ASSET_REPO_ID."
         )
     rows = filter_rows(
         load_registry_rows(args.registry_path),
@@ -173,7 +176,7 @@ def main() -> None:
     api, hf_hub_download = build_api(args)
     repo_files = set(list_repo_files(api, args.repo_id, args.hf_token))
 
-    output_dir = Path(args.output_dir or make_output_root("stage2_hf_downloads")).resolve()
+    output_dir = Path(args.output_dir or make_output_root("sit_checkpoint_downloads")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     rows_summary: List[Dict[str, object]] = []
 
@@ -181,7 +184,7 @@ def main() -> None:
         group_id = str(row.get("group_id", "")).strip()
         ifid_exp_name = str(row.get("ifid_exp_name", "")).strip()
         hf_subdir = resolve_hf_subdir(ifid_exp_name)
-        target_dir = resolve_target_dir(row, args.stage2_assets_root)
+        target_dir = resolve_target_dir(row, args.sit_assets_root)
         remote_files = expected_remote_files(row, hf_subdir, args.default_ckpt_step, args.include_log)
 
         missing_remote = [remote_file for remote_file in remote_files if remote_file not in repo_files]
@@ -268,7 +271,7 @@ def main() -> None:
     md_path.write_text(render_markdown(summary, rows_summary))
 
     print("=" * 72)
-    print("Stage2 HF download summary written")
+    print("GAR-FID HF download summary written")
     print(f"repo_id       : {args.repo_id}")
     print(f"rows_processed: {summary['rows_processed']}")
     print(f"rows_success  : {summary['rows_success']}")

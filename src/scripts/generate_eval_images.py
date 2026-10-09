@@ -3,9 +3,9 @@ Generate images for FID evaluation. Supports DDP for multi-GPU.
 
 Five evaluation modes (selectable via --modes):
   vanilla_rfid:    x -> Encoder -> z -> Decoder -> x'
-  our_rfid_nocfg:  x -> Encoder -> z -> noise(t) -> Denoise(no CFG) -> Decoder -> x'
+  garfid_nocfg:  x -> Encoder -> z -> noise(t) -> Denoise(no CFG) -> Decoder -> x'
                    (uses **true class labels** from --label_map_json per val image)
-  our_rfid_cfg:    x -> Encoder -> z -> noise(t) -> Denoise(CFG) -> Decoder -> x'
+  garfid_cfg:    x -> Encoder -> z -> noise(t) -> Denoise(CFG) -> Decoder -> x'
                    (same true labels as nocfg)
   gfid_nocfg:      noise -> Generate(no CFG) -> Decoder -> x
   gfid_cfg:        noise -> Generate(CFG) -> Decoder -> x
@@ -13,8 +13,8 @@ Five evaluation modes (selectable via --modes):
 Output NPZ files (uint8 NHWC, key='arr_0'):
   Input.npz                           -- reference images (for rFID)
   VAE_reconstruction.npz              -- vanilla rFID
-  Denoising_t{t}_noCFG_{model}.npz    -- our rFID without CFG
-  Denoising_t{t}_CFG_{model}.npz      -- our rFID with CFG
+  Denoising_t{t}_noCFG_{model}.npz    -- GAR-FID without CFG
+  Denoising_t{t}_CFG_{model}.npz      -- GAR-FID with CFG
   Generated_noCFG_{model}.npz         -- gFID without CFG
   Generated_CFG_{model}.npz           -- gFID with CFG
 
@@ -77,11 +77,16 @@ from models.tokenizer import Tokenizer
 
 ALL_MODES = [
     'vanilla_rfid',
-    'our_rfid_nocfg',
-    'our_rfid_cfg',
+    'garfid_nocfg',
+    'garfid_cfg',
     'gfid_nocfg',
     'gfid_cfg',
 ]
+
+LEGACY_MODE_ALIASES = {
+    'our_rfid_nocfg': 'garfid_nocfg',
+    'our_rfid_cfg': 'garfid_cfg',
+}
 
 
 # ============================================================
@@ -228,7 +233,7 @@ def generate_reconstruction(model, dataloader, device, mode, noise_level=0.2,
             x_rec = model_u.vae_reconstruction(batch_float)
             local_output_images.append(to_uint8(x_rec))
 
-        elif mode == 'our_rfid_nocfg':
+        elif mode == 'garfid_nocfg':
             z_real = model_u.tokenizer.encode(batch_float)
             z_noisy, _ = model_u.diffusion_pytorch.add_noise(z_real, noise_level)
             labels = batch_labels if batch_labels is not None else torch.randint(0, 1000, (B,), device=device)
@@ -238,7 +243,7 @@ def generate_reconstruction(model, dataloader, device, mode, noise_level=0.2,
             x_rec = model_u.decode_latent(z_den)
             local_output_images.append(to_uint8(x_rec))
 
-        elif mode == 'our_rfid_cfg':
+        elif mode == 'garfid_cfg':
             z_real = model_u.tokenizer.encode(batch_float)
             z_noisy, _ = model_u.diffusion_pytorch.add_noise(z_real, noise_level)
             labels = batch_labels if batch_labels is not None else torch.randint(0, 1000, (B,), device=device)
@@ -328,8 +333,8 @@ def main():
     parser.add_argument('--output_dir', type=str, default='./results/fid',
                         help='Output directory for NPZ files')
     parser.add_argument('--modes', type=str, default='all',
-                        help='Comma-separated modes: vanilla_rfid, our_rfid_nocfg, '
-                             'our_rfid_cfg, gfid_nocfg, gfid_cfg, or "all"')
+                        help='Comma-separated modes: vanilla_rfid, garfid_nocfg, '
+                             'garfid_cfg, gfid_nocfg, gfid_cfg, or "all"')
     parser.add_argument('--num_samples', type=int, default=50000)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--noise_levels', type=str, default='0.2',
@@ -355,14 +360,14 @@ def main():
     if args.modes.strip().lower() == 'all':
         modes = ALL_MODES
     else:
-        modes = [m.strip() for m in args.modes.split(',')]
+        modes = [LEGACY_MODE_ALIASES.get(m.strip(), m.strip()) for m in args.modes.split(',')]
         for m in modes:
             if m not in ALL_MODES:
                 print(f"ERROR: Unknown mode '{m}'. Available: {ALL_MODES}")
                 sys.exit(1)
 
     noise_levels = [float(x) for x in args.noise_levels.split(',')]
-    needs_dataset = any(m in modes for m in ['vanilla_rfid', 'our_rfid_nocfg', 'our_rfid_cfg'])
+    needs_dataset = any(m in modes for m in ['vanilla_rfid', 'garfid_nocfg', 'garfid_cfg'])
 
     if needs_dataset and not args.dataset_dir:
         print("ERROR: --dataset_dir required for rFID modes")
@@ -436,7 +441,7 @@ def main():
     # ============================================================
     # rFID modes (need ImageNet dataset)
     # ============================================================
-    rfid_modes = [m for m in modes if m in ['vanilla_rfid', 'our_rfid_nocfg', 'our_rfid_cfg']]
+    rfid_modes = [m for m in modes if m in ['vanilla_rfid', 'garfid_nocfg', 'garfid_cfg']]
 
     if rfid_modes:
         dataset = PairedImageNetDataset(
@@ -485,7 +490,7 @@ def main():
                 if world_size > 1:
                     dist.barrier()
 
-            elif mode in ('our_rfid_nocfg', 'our_rfid_cfg'):
+            elif mode in ('garfid_nocfg', 'garfid_cfg'):
                 for noise_level in noise_levels:
                     local_inp, local_out, local_idx = generate_reconstruction(
                         model, dataloader, device, mode=mode,
@@ -504,7 +509,7 @@ def main():
                             save_npz(inp_imgs, os.path.join(args.output_dir, 'Input.npz'))
                             input_saved = True
 
-                        cfg_tag = "noCFG" if mode == 'our_rfid_nocfg' else "CFG"
+                        cfg_tag = "noCFG" if mode == 'garfid_nocfg' else "CFG"
                         fname = f"Denoising_t{noise_level}_{cfg_tag}_{args.model_type}.npz"
                         save_npz(out_imgs, os.path.join(args.output_dir, fname))
 

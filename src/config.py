@@ -184,7 +184,7 @@ def parse_arg():
 
     # Generate saver_name_pre if not provided
     if not args.saver_name_pre:
-        args.saver_name_pre = 'IMF_Decoder_GAP_{}_{}_{}_{}_{}'.format(
+        args.saver_name_pre = 'GAR_Decoder_Adaptation_{}_{}_{}_{}_{}'.format(
             args.dataset_name, args.model_type, args.num_steps,
             args.maximum_noise_level, args.normalized
         )

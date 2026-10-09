@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from pipelines.sit_stage2_common import (  # noqa: E402
+from pipelines.sit_common import (  # noqa: E402
     DEFAULT_IFID_REPO_ROOT,
     DEFAULT_REGISTRY_PATH,
     filter_rows,
@@ -23,7 +23,7 @@ from pipelines.sit_stage2_common import (  # noqa: E402
 )
 
 
-SERVER_STAGE2_ASSETS_ROOT = os.environ.get("STAGE2_ASSETS_ROOT", "./assets/stage2_assets")
+SERVER_SIT_ASSETS_ROOT = os.environ.get("SIT_ASSETS_ROOT", os.environ.get("STAGE2_ASSETS_ROOT", "./assets/sit"))
 SERVER_IMAGENET_TRAIN_DIR = "/public/test/data/imagenet/train"
 SERVER_IMAGENET_VAL_DIR = "/public/test/data/imagenet/val"
 SERVER_LABEL_MAP_JSON = os.environ.get("LABEL_MAP_JSON", "src/scripts/imagenet_val_dir_to_index.json")
@@ -33,7 +33,7 @@ SERVER_IFID_REPO_ROOT = os.environ.get("IFID_ROOT", "third_party/ifid")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Backfill Stage 2 registry rows with server-side paths and checkpoint metadata."
+        description="Backfill GAR-FID evaluation registry rows with server-side paths and checkpoint metadata."
     )
     parser.add_argument("--registry_path", type=str, default=str(DEFAULT_REGISTRY_PATH))
     parser.add_argument("--output_path", type=str, default=None)
@@ -41,7 +41,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no_backup", action="store_true", help="Do not create .bak when overwriting the input CSV.")
     parser.add_argument("--group_ids", nargs="*", default=None)
     parser.add_argument("--only_should_run", action="store_true")
-    parser.add_argument("--stage2_assets_root", type=str, default=SERVER_STAGE2_ASSETS_ROOT)
+    parser.add_argument("--sit_assets_root", type=str, default=SERVER_SIT_ASSETS_ROOT)
+    parser.add_argument("--stage2_assets_root", dest="sit_assets_root", default=argparse.SUPPRESS,
+                        help=argparse.SUPPRESS)
     parser.add_argument("--imagenet_train_dir", type=str, default=SERVER_IMAGENET_TRAIN_DIR)
     parser.add_argument("--imagenet_val_dir", type=str, default=SERVER_IMAGENET_VAL_DIR)
     parser.add_argument("--label_map_json", type=str, default=SERVER_LABEL_MAP_JSON)
@@ -82,8 +84,8 @@ def _set_value(
             changes.append(field_name)
 
 
-def _build_exp_path(stage2_assets_root: str, ifid_exp_name: str) -> str:
-    return str((Path(stage2_assets_root) / ifid_exp_name).resolve())
+def _build_exp_path(sit_assets_root: str, ifid_exp_name: str) -> str:
+    return str((Path(sit_assets_root) / ifid_exp_name).resolve())
 
 
 def _build_args_json(exp_path: str) -> str:
@@ -96,7 +98,7 @@ def _maybe_build_hf_source(ifid_repo_root: str, ifid_exp_name: str) -> str:
 
 def _render_preview(summary: Dict[str, object], rows: List[Dict[str, object]]) -> str:
     lines = [
-        "# Stage2 Registry Backfill Preview",
+        "# GAR-FID Registry Backfill Preview",
         "",
         f"- `registry_path`: `{summary['registry_path']}`",
         f"- `target_output`: `{summary['target_output']}`",
@@ -140,7 +142,7 @@ def main() -> None:
             only_should_run=args.only_should_run,
         ):
             ifid_exp_name = str(row_copy.get("ifid_exp_name", "")).strip()
-            exp_path = _build_exp_path(args.stage2_assets_root, ifid_exp_name)
+            exp_path = _build_exp_path(args.sit_assets_root, ifid_exp_name)
             args_json = _build_args_json(exp_path)
 
             _set_value(row_copy, "exp_path", exp_path, force=args.force_paths, changes=changed_fields)
@@ -186,7 +188,7 @@ def main() -> None:
     fieldnames = [name for name in updated_rows[0].keys() if name != "__normalized_misaligned_csv"]
     target_output = Path(args.output_path).resolve() if args.output_path else registry_path
 
-    preview_root = Path(args.output_dir or make_output_root("stage2_registry_backfill_preview")).resolve()
+    preview_root = Path(args.output_dir or make_output_root("sit_registry_backfill_preview")).resolve()
     preview_root.mkdir(parents=True, exist_ok=True)
     preview_csv = preview_root / "registry_backfill_preview.csv"
     preview_md = preview_root / "registry_backfill_preview.md"
@@ -219,7 +221,7 @@ def main() -> None:
                 writer.writerow(serializable)
 
     print("=" * 72)
-    print("Stage2 registry backfill preview written")
+    print("GAR-FID registry backfill preview written")
     print(f"registry_path  : {registry_path}")
     print(f"target_output  : {target_output}")
     print(f"rows_selected  : {len(filtered_rows)}")

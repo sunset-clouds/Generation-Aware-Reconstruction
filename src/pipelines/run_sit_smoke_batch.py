@@ -14,7 +14,7 @@ REPO_ROOT = SRC_ROOT
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from pipelines.sit_stage2_common import (
+from pipelines.sit_common import (
     DEFAULT_IFID_REPO_ROOT,
     classify_runtime_failure,
     filter_rows,
@@ -24,7 +24,7 @@ from pipelines.sit_stage2_common import (
     missing_ifid_runtime_files,
     path_exists,
     resolve_reference_path,
-    resolve_stage2_vae_config_path,
+    resolve_sit_vae_config_path,
     resolve_user_path,
     summarize_check_status,
 )
@@ -32,7 +32,7 @@ from pipelines.sit_stage2_common import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Batch smoke runner for Stage 2 SiT checkpoints. This runner never computes full metrics."
+        description="Batch smoke runner for GAR-FID evaluation SiT checkpoints. This runner never computes full metrics."
     )
     parser.add_argument("--registry_path", type=str, default=None)
     parser.add_argument("--ifid_repo_root", type=str, default=str(DEFAULT_IFID_REPO_ROOT))
@@ -107,7 +107,7 @@ def _audit_row(row: Dict[str, str], ifid_repo_root: str) -> Tuple[List[str], Lis
 
     vae_config_value = str(row.get("vae_config", "")).strip()
     if vae_config_value:
-        resolved_vae_config = resolve_stage2_vae_config_path(
+        resolved_vae_config = resolve_sit_vae_config_path(
             vae_config_value,
             ifid_repo_root=ifid_repo_root,
             exp_path=resolved_exp_path,
@@ -207,7 +207,7 @@ def _infer_checks(returncode: int, output: str) -> Tuple[str, str]:
 
 def _render_markdown(summary: Dict[str, object], rows: List[Dict[str, object]]) -> str:
     lines = [
-        "# Stage2 Batch Smoke Summary",
+        "# GAR-FID Batch Smoke Summary",
         "",
         f"- `registry_path`: `{summary['registry_path']}`",
         f"- `ifid_repo_root`: `{summary['ifid_repo_root']}`",
@@ -237,7 +237,7 @@ def main() -> None:
         only_should_run=args.only_should_run,
     )
     ifid_repo_root = resolve_user_path(args.ifid_repo_root)
-    output_root = Path(args.output_dir or make_output_root("stage2_smoke_batch")).resolve()
+    output_root = Path(args.output_dir or make_output_root("garfid_smoke_batch")).resolve()
     logs_dir = output_root / "logs"
     runs_dir = output_root / "runs"
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -360,7 +360,7 @@ def main() -> None:
     summary_md.write_text(_render_markdown(summary, results))
 
     print("=" * 72)
-    print("Stage2 batch smoke summary written")
+    print("GAR-FID batch smoke summary written")
     print(f"rows_requested : {summary['rows_requested']}")
     print(f"rows_executed  : {summary['rows_executed']}")
     print(f"rows_succeeded : {summary['rows_succeeded']}")

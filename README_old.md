@@ -1,13 +1,14 @@
-# GAR-FID: Aligning Reconstruction with Generation
+# GAR: Extended Runtime Setup
 
-This repository contains the Stage 2 and Stage 3 code for **GAR-FID**
-(*Generation-Aligned Reconstruction FID*), used in the project
-**Aligning Reconstruction with Generation**.
+This repository contains code for **generation-aware reconstruction (GAR)**,
+GAR-FID evaluation, and decoder adaptation, accompanying
+**A Latent Distribution Perspective on Evaluating and Improving Latent Generative Models**.
+See [README.md](README.md) for the main workflows.
 
 The released code focuses on:
 
-- **Stage 2:** GAR-FID evaluation for SiT/iFID checkpoints.
-- **Stage 3:** decoder adaptation / post-training for iMF models.
+- **GAR-FID evaluation** for SiT/iFID checkpoints.
+- **Decoder adaptation** for iMF models.
 
 Large files are intentionally not committed. ImageNet, generated samples,
 FID statistics, VAE checkpoints, SiT checkpoints, iMF checkpoints, and
@@ -18,20 +19,23 @@ with the commands below.
 
 ```text
 assets/
-  sit_checkpoint_registry_template.csv   Stage-2 SiT/iFID checkpoint registry
+  sit_checkpoint_registry_template.csv   GAR-FID SiT/iFID checkpoint registry
 scripts/
   prepare_imagenet_labels.sh             Build ImageNet val folder -> class id map
-  stage2_*.sh                            Stage-2 GAR-FID wrappers
-  stage3_*.sh                            Stage-3 conversion, training, eval wrappers
+  evaluate_garfid*.sh                    GAR-FID evaluation wrappers
+  compute_correlations.sh               Correlation analysis
+  train_decoder_adaptation.sh           Decoder adaptation
+  evaluate_decoder.sh                   Adapted-decoder evaluation
+  convert_imf_checkpoint.sh             Legacy checkpoint conversion
 src/
   integrations/sit/                      SiT checkpoint loading and GAR adapters
-  pipelines/                             Stage-2 GAR-FID pipelines
-  post_train.py                          Stage-3 decoder-adaptation training
+  pipelines/                            GAR-FID evaluation pipelines
+  train_decoder_adaptation.py            Decoder-adaptation training
   models/imf_torch/                      PyTorch iMF backends and converted architecture
   tools/jax_conversion/                  Optional legacy checkpoint conversion only
   data, metric, utils/                   Shared runtime modules
-third_party/ifid/                        Minimal iFID/SiT runtime used by Stage 2
-requirements.txt                         PyTorch Stage-2/3 runtime dependencies
+third_party/ifid/                        Minimal iFID/SiT runtime used by GAR-FID evaluation
+requirements.txt                         PyTorch GAR evaluation and decoder-adaptation runtime dependencies
 requirements-fid.txt                     Isolated OpenAI TensorFlow FID environment
 requirements-jax-conversion.txt          Optional Flax checkpoint converter
 ```
@@ -46,9 +50,9 @@ Before running experiments, prepare the following:
 3. ImageNet validation label map JSON
 4. ImageNet FID reference statistics NPZ
 5. PyTorch FID Inception checkpoint
-6. Stage-2 SiT/iFID args.json and checkpoints
-7. Stage-3 iMF PyTorch checkpoint
-8. Stage-3 SD-VAE, LPIPS, and DINO checkpoints
+6. GAR-FID SiT/iFID args.json and checkpoints
+7. decoder-adaptation iMF PyTorch checkpoint
+8. decoder-adaptation SD-VAE, LPIPS, and DINO checkpoints
 ```
 
 A typical local asset layout is:
@@ -57,7 +61,7 @@ A typical local asset layout is:
 assets/
   generated/
     imagenet_val_dir_to_index.json
-  stage2_assets/
+  sit/
     sit-b-sdvae-400k/
       args.json
       checkpoints/0400000.pt
@@ -107,9 +111,9 @@ Minimum assets by experiment:
 
 | Experiment | Required assets |
 | --- | --- |
-| Stage 2 smoke/full | ImageNet `val/`, label map JSON, ImageNet FID reference NPZ, PyTorch FID Inception checkpoint, SiT/iFID checkpoint row |
-| Stage 3 training | ImageNet `train/` and `val/`, official iMF PyTorch checkpoint, SD-VAE, LPIPS VGG checkpoint, DINO checkpoint |
-| Stage 3 evaluation | ImageNet `val/`, official iMF PyTorch checkpoint, decoder-adapted checkpoint, label map JSON, ImageNet FID reference NPZ, OpenAI Inception graph |
+| GAR-FID evaluation smoke/full | ImageNet `val/`, label map JSON, ImageNet FID reference NPZ, PyTorch FID Inception checkpoint, SiT/iFID checkpoint row |
+| decoder adaptation training | ImageNet `train/` and `val/`, official iMF PyTorch checkpoint, SD-VAE, LPIPS VGG checkpoint, DINO checkpoint |
+| decoder adaptation evaluation | ImageNet `val/`, official iMF PyTorch checkpoint, decoder-adapted checkpoint, label map JSON, ImageNet FID reference NPZ, OpenAI Inception graph |
 
 ImageNet and ImageNet FID statistics are not redistributed by this repository.
 Use your licensed ImageNet copy and the same FID statistics file as the
@@ -148,14 +152,14 @@ source .venv-fid/bin/activate
 pip install -r requirements-fid.txt
 ```
 
-Stage 3 is PyTorch-only. JAX/Flax is needed only when converting a legacy iMF
+Decoder adaptation is PyTorch-only. JAX/Flax is needed only when converting a legacy iMF
 checkpoint, and belongs in a separate optional environment:
 
 ```bash
 python -m venv .venv-jax-conversion
 source .venv-jax-conversion/bin/activate
 pip install -r requirements-jax-conversion.txt
-bash scripts/stage3_convert_imf_checkpoint.sh \
+bash scripts/convert_imf_checkpoint.sh \
   iMF-B-2 /path/to/flax/checkpoint /path/to/iMF-B-2.pt
 ```
 
@@ -168,7 +172,7 @@ export PYTHONPATH=src:third_party/ifid:${PYTHONPATH:-}
 
 ## Download Checkpoints
 
-### Stage 3 iMF checkpoints
+### iMF checkpoints for decoder adaptation
 
 The official iMF-B/M/L/XL PyTorch checkpoints and GAR decoder-adapted
 checkpoints are hosted here:
@@ -210,9 +214,9 @@ huggingface-cli login
 
 Use a read-only token for collaborators.
 
-### Stage 2 SiT/iFID checkpoints
+### SiT/iFID checkpoints for GAR-FID evaluation
 
-Stage 2 uses the public iFID checkpoint repository:
+GAR-FID evaluation uses the public iFID checkpoint repository:
 
 ```text
 xutongda/Making-rFID-Predictive-of-Diffusion-gFID
@@ -221,26 +225,26 @@ xutongda/Making-rFID-Predictive-of-Diffusion-gFID
 Download the SiT args/checkpoint files listed in the registry:
 
 ```bash
-bash scripts/stage2_download_ifid_assets.sh --only_should_run
+bash scripts/download_sit_checkpoints.sh --only_should_run
 ```
 
 To download only one row, for example `sdvae_b`:
 
 ```bash
-bash scripts/stage2_download_ifid_assets.sh --group_ids sdvae_b
+bash scripts/download_sit_checkpoints.sh --group_ids sdvae_b
 ```
 
 This writes files under the registry paths, usually:
 
 ```text
-assets/stage2_assets/
+assets/sit/
 ```
 
 If you need a mirror, custom cache, or private token:
 
 ```bash
-export STAGE2_ASSET_REPO_ID=xutongda/Making-rFID-Predictive-of-Diffusion-gFID
-export STAGE2_ASSETS_ROOT=assets/stage2_assets
+export SIT_ASSET_REPO_ID=xutongda/Making-rFID-Predictive-of-Diffusion-gFID
+export SIT_ASSETS_ROOT=assets/sit
 export HF_TOKEN=your_read_token_for_private_repos
 ```
 
@@ -249,7 +253,7 @@ Leave `HF_TOKEN` unset for public downloads.
 To inspect what would be downloaded without copying large files:
 
 ```bash
-bash scripts/stage2_download_ifid_assets.sh --only_should_run --dry_run
+bash scripts/download_sit_checkpoints.sh --only_should_run --dry_run
 ```
 
 ### FID and loss checkpoints
@@ -263,7 +267,7 @@ export LPIPS_VGG_CKPT=/path/to/vgg.pth
 export DINO_CKPT_PATH=/path/to/dino_deitsmall16_pretrain.pth
 ```
 
-For OpenAI-style TensorFlow FID used by Stage-3 evaluation, either place:
+For OpenAI-style TensorFlow FID used by decoder-adaptation evaluation, either place:
 
 ```text
 src/metric/classify_image_graph_def.pb
@@ -288,7 +292,7 @@ We do not redistribute ImageNet or ImageNet FID statistics. Provide your own
 
 ## Prepare ImageNet Labels
 
-Stage 2 needs a validation-folder to class-id map. Build it once from your
+GAR-FID evaluation needs a validation-folder to class-id map. Build it once from your
 ImageNet validation folder:
 
 ```bash
@@ -297,47 +301,47 @@ bash scripts/prepare_imagenet_labels.sh \
   "${LABEL_MAP_JSON}"
 ```
 
-Then either copy it to the default Stage-2 path:
+Then either copy it to the default GAR-FID path:
 
 ```bash
 cp assets/generated/imagenet_val_dir_to_index.json \
   src/scripts/imagenet_val_dir_to_index.json
 ```
 
-or pass it through `LABEL_MAP_JSON` when running Stage 2. The commands below
+or pass it through `LABEL_MAP_JSON` when running GAR-FID evaluation. The commands below
 use the environment variable and do not require copying into `src/scripts/`.
 
-## Stage 2: GAR-FID on SiT/iFID Models
+## GAR-FID Evaluation on SiT/iFID Models
 
 ### Smoke test
 
-Run a small Stage-2 check first:
+Run a small GAR-FID check first:
 
 ```bash
 ETA_T=0.3 NUM_SAMPLES=8 BATCH_SIZE=2 SAVE_NPZ=1 \
-bash scripts/stage2_run_sit_garfid.sh \
+bash scripts/evaluate_garfid.sh \
   sdvae_b \
   "${IMAGENET_VAL}" \
   "${FID_REFERENCE_FILE}" \
-  results/stage2_smoke/sdvae_b_eta03_n8
+  results/garfid_smoke/sdvae_b_eta03_n8
 ```
 
 Expected output:
 
 ```text
-results/stage2_smoke/sdvae_b_eta03_n8/summary.json
-results/stage2_smoke/sdvae_b_eta03_n8/preview_grid.png
+results/garfid_smoke/sdvae_b_eta03_n8/summary.json
+results/garfid_smoke/sdvae_b_eta03_n8/preview_grid.png
 ```
 
 ### Full single-point run
 
 ```bash
 ETA_T=0.3 NUM_SAMPLES=50000 BATCH_SIZE=16 SAVE_NPZ=1 \
-bash scripts/stage2_run_sit_garfid.sh \
+bash scripts/evaluate_garfid.sh \
   sdvae_b \
   "${IMAGENET_VAL}" \
   "${FID_REFERENCE_FILE}" \
-  results/stage2_sit_garfid/sdvae_b_eta03
+  results/garfid/sdvae_b_eta03
 ```
 
 ### Noise sweep
@@ -345,33 +349,33 @@ bash scripts/stage2_run_sit_garfid.sh \
 ```bash
 ETA_LIST="0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0" \
 NUM_SAMPLES=50000 BATCH_SIZE=16 SAVE_NPZ=1 \
-bash scripts/stage2_run_sit_garfid_sweep.sh \
+bash scripts/evaluate_garfid_sweep.sh \
   sdvae_b \
   "${IMAGENET_VAL}" \
   "${FID_REFERENCE_FILE}" \
-  results/stage2_sit_garfid/sdvae_b
+  results/garfid/sdvae_b
 ```
 
 ### Correlation table
 
-After collecting Stage-2 rows:
+After collecting GAR-FID rows:
 
 ```bash
-bash scripts/stage2_compute_correlations.sh \
-  /path/to/stage2_garfid_results.csv \
-  results/stage2_correlation_results.csv \
-  results/stage2_correlation_rows.tex
+bash scripts/compute_correlations.sh \
+  /path/to/garfid_results.csv \
+  results/garfid_correlation_results.csv \
+  results/garfid_correlation_rows.tex
 ```
 
-## Stage 3: Decoder Adaptation for iMF
+## Decoder Adaptation for iMF
 
-Stage 3 trains the SD-VAE decoder with the iMF latent generator fixed.
+Decoder adaptation trains the SD-VAE decoder with the iMF latent generator fixed.
 
 Training parameters are explicit command-line flags and environment variables.
 For M/L/XL, pass the matching checkpoint and set
 `EXTRA_ARGS="--model_type iMF-M-2"` or the corresponding scale.
 
-### Required Stage-3 assets
+### Required decoder-adaptation assets
 
 Set these paths before training:
 
@@ -386,7 +390,7 @@ export HF_HOME=/path/to/hf_cache
 If you do not have a local SD-VAE directory, leave `SD_VAE_PATH` unset and
 `diffusers` will try to load `stabilityai/sd-vae-ft-mse` from Hugging Face.
 
-### Stage-3 smoke test
+### Decoder-adaptation smoke test
 
 Run one training step before launching a full job:
 
@@ -398,16 +402,16 @@ MAX_TRAIN_STEPS=1 \
 BATCH_SIZE=1 \
 NUM_WORKERS=0 \
 EXTRA_ARGS="--model_type iMF-B-2 --disc_start_epoch 999" \
-bash scripts/stage3_train_decoder_adaptation.sh \
+bash scripts/train_decoder_adaptation.sh \
   "${IMAGENET_ROOT}" \
   assets/checkpoints/imf-gar/official-pytorch/iMF-B-2.pt \
-  results/stage3_smoke/imf_b2
+  results/decoder_adaptation_smoke/imf_b2
 ```
 
 Expected output:
 
 ```text
-results/stage3_smoke/imf_b2/checkpoints/checkpoint-*-final.pth.tar
+results/decoder_adaptation_smoke/imf_b2/checkpoints/checkpoint-*-final.pth.tar
 ```
 
 ### Full B-model training
@@ -418,7 +422,7 @@ EPOCHS=10 \
 BATCH_SIZE=32 \
 NUM_WORKERS=8 \
 EXTRA_ARGS="--model_type iMF-B-2 --minimum_noise_level 0.25 --maximum_noise_level 0.45" \
-bash scripts/stage3_train_decoder_adaptation.sh \
+bash scripts/train_decoder_adaptation.sh \
   "${IMAGENET_ROOT}" \
   assets/checkpoints/imf-gar/official-pytorch/iMF-B-2.pt \
   results/decoder_adaptation_imf_b2_noise025045
@@ -444,7 +448,7 @@ CFG_T_MAX=0.65 \
 LABEL_MAP_JSON="${LABEL_MAP_JSON}" \
 OPENAI_INCEPTION_GRAPH=/path/to/classify_image_graph_def.pb \
 PYTHON=/path/to/tensorflow_env/bin/python \
-bash scripts/stage3_evaluate_posttrained_decoder.sh \
+bash scripts/evaluate_decoder.sh \
   iMF-B-2 \
   assets/checkpoints/imf-gar/official-pytorch/iMF-B-2.pt \
   /path/to/decoder_adapted_checkpoint.pth.tar \
@@ -464,7 +468,7 @@ results/eval_posttrained_imf_b2/fid_results_openai.json
 
 These commands were smoke-tested on `loginpoint-3`.
 
-### Server Stage-2 smoke
+### Server GAR-FID smoke
 
 ```bash
 PYTHON=/mnt/nfs/wenjie/FD-Loss/.venv/bin/python \
@@ -473,23 +477,23 @@ LABEL_MAP_JSON=/mnt/nfs/wenjie/IMF-GAP_V1/scripts/imagenet_val_dir_to_index.json
 FID_REFERENCE_FILE=/mnt/nfs/wenjie/IMF-GAP_V1/metric/VIRTUAL_imagenet256_labeled.npz \
 PYTORCH_FID_INCEPTION_CKPT=/mnt/nfs/wenjie/torch_cache/hub/checkpoints/pt_inception-2015-12-05-6726825d.pth \
 ETA_T=0.3 NUM_SAMPLES=2 BATCH_SIZE=1 NUM_WORKERS=0 SAVE_NPZ=1 \
-bash scripts/stage2_run_sit_garfid.sh \
+bash scripts/evaluate_garfid.sh \
   sdvae_b \
   /mnt/nfs/wenjie/dataset/imagenet/val \
   /mnt/nfs/wenjie/IMF-GAP_V1/metric/VIRTUAL_imagenet256_labeled.npz \
-  results/stage2_runtime_check/wrapper_sdvae_b_eta03_n2
+  results/garfid_runtime_check/wrapper_sdvae_b_eta03_n2
 ```
 
 This produced:
 
 ```text
-results/stage2_runtime_check/wrapper_sdvae_b_eta03_n2/summary.json
+results/garfid_runtime_check/wrapper_sdvae_b_eta03_n2/summary.json
 ```
 
-### Server Stage-3 smoke
+### Server decoder-adaptation smoke
 
 The server environment contains `bitsandbytes`, and recent `diffusers` imports
-its quantizer even though Stage 3 does not use quantization. On compute nodes
+its quantizer even though decoder adaptation does not use quantization. On compute nodes
 without a C compiler this can fail during import. The verified server run used
 a runtime-only shim at:
 
@@ -507,27 +511,27 @@ TORCH_HOME=/mnt/nfs/wenjie/torch_cache \
 HF_HOME=/mnt/nfs/wenjie/hf_cache \
 SD_VAE_PATH=/mnt/nfs/wenjie/vae_assets/sd-vae-ft-mse \
 /mnt/nfs/wenjie/FD-Loss/.venv/bin/python -m torch.distributed.run \
-  --standalone --nnodes=1 --nproc_per_node=1 src/post_train.py \
+  --standalone --nnodes=1 --nproc_per_node=1 src/train_decoder_adaptation.py \
   --dataset_dir /mnt/nfs/wenjie/dataset/imagenet_idx \
   --pretrained_imf_pytorch /mnt/nfs/wenjie/IMF-GAP_V1/checkpoints/pytorch/iMF-B-2.pt \
-  --checkpoint_dir results/stage3_runtime_check/checkpoints \
-  --results_dir results/stage3_runtime_check/results \
-  --saver_dir results/stage3_runtime_check/saver \
-  --yaml_dir results/stage3_runtime_check/resolved_configs \
+  --checkpoint_dir results/decoder_adaptation_runtime_check/checkpoints \
+  --results_dir results/decoder_adaptation_runtime_check/results \
+  --saver_dir results/decoder_adaptation_runtime_check/saver \
+  --yaml_dir results/decoder_adaptation_runtime_check/resolved_configs \
   --epochs 1 \
   --eval_epochs 999 \
   --batch_size 1 \
   --workers 0 \
   --max_train_steps 1 \
   --model_type iMF-B-2 \
-  --saver_name_pre stage3_smoke_imf_b2 \
+  --saver_name_pre decoder_adaptation_smoke_imf_b2 \
   --disc_start_epoch 999
 ```
 
 This produced:
 
 ```text
-results/stage3_runtime_check/checkpoints/checkpoint-stage3_smoke_imf_b2-final.pth.tar
+results/decoder_adaptation_runtime_check/checkpoints/checkpoint-decoder_adaptation_smoke_imf_b2-final.pth.tar
 ```
 
 ## Troubleshooting
@@ -558,16 +562,16 @@ export PYTORCH_FID_INCEPTION_CKPT=/path/to/pt_inception-2015-12-05-6726825d.pth
 
 ### `args.json not found` or `Checkpoint file not found`
 
-Download Stage-2 assets:
+Download GAR-FID assets:
 
 ```bash
-bash scripts/stage2_download_ifid_assets.sh --group_ids sdvae_b
+bash scripts/download_sit_checkpoints.sh --group_ids sdvae_b
 ```
 
 or edit `assets/sit_checkpoint_registry_template.csv` to point to your local
 SiT checkpoint directory.
 
-### Stage 3 cannot find ImageNet train
+### Decoder adaptation cannot find ImageNet train
 
 Pass the ImageNet root that contains both `train/` and `val/`:
 
@@ -599,16 +603,16 @@ export LPIPS_VGG_CKPT=/path/to/vgg.pth
 
 ### `diffusers` fails because `bitsandbytes` triggers Triton/C compiler setup
 
-This is an environment issue. Stage 3 does not require bitsandbytes
+This is an environment issue. Decoder adaptation does not require bitsandbytes
 quantization. Use an environment without bitsandbytes, install a working C
 compiler on the compute node, or mask bitsandbytes from this run as done in
 the verified server command above.
 
 ## Notes for Reproducing Paper Numbers
 
-- Stage-2 numbers depend on the exact SiT/iFID checkpoint, tokenizer config,
+- GAR-FID numbers depend on the exact SiT/iFID checkpoint, tokenizer config,
   ImageNet preprocessing, and FID statistics.
-- Stage-3 gFID numbers depend on the iMF checkpoint, decoder-adapted checkpoint,
+- decoder-adaptation gFID numbers depend on the iMF checkpoint, decoder-adapted checkpoint,
   CFG parameters, and the FID backend.
 - Do not commit generated `.npz` samples, `.pb` Inception graphs, pretrained
   checkpoints, or ImageNet assets. The `.gitignore` intentionally excludes
@@ -616,7 +620,7 @@ the verified server command above.
 
 ## Third-Party Code
 
-Stage 2 includes a minimal iFID/SiT runtime under `third_party/ifid`. This code
+GAR-FID evaluation includes a minimal iFID/SiT runtime under `third_party/ifid`. This code
 is kept separate from the GAR-FID code path. Check upstream licenses before a
 public release and keep third-party notices up to date.
 

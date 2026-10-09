@@ -124,7 +124,7 @@ Increasing the noise level moves GAR latents toward the generation-time distribu
 
 ## Repository Structure
 
-The released code covers GAR-FID evaluation with SiT/iFID checkpoints (**Stage 2**) and decoder adaptation for iMF (**Stage 3**).
+The released code has two independent workflows: **GAR-FID evaluation** with SiT/iFID checkpoints and **decoder adaptation** for iMF. They can be run separately.
 
 ```text
 assets/
@@ -133,14 +133,18 @@ docs/
   assets/                               # Paper and figures
   index.html                            # Project website
 scripts/
-  prepare_imagenet_labels.sh             # Validation-folder label mapping
-  stage2_*.sh                           # GAR-FID evaluation and correlations
-  stage3_*.sh                           # Decoder training and evaluation
+  prepare_imagenet_labels.sh            # Validation-folder label mapping
+  download_sit_checkpoints.sh           # SiT/iFID checkpoints
+  evaluate_garfid.sh                    # Single-noise GAR-FID evaluation
+  evaluate_garfid_sweep.sh              # GAR trajectory evaluation
+  compute_correlations.sh              # Pearson and Spearman correlations
+  train_decoder_adaptation.sh          # Decoder adaptation
+  evaluate_decoder.sh                  # Adapted-decoder generation evaluation
 src/
   integrations/sit/                     # SiT checkpoint loading and GAR adapters
-  pipelines/                            # Stage-2 evaluation pipelines
-  post_train.py                         # Decoder-adaptation training
-  models/                               # Tokenizer, iMF, and loss implementations
+  pipelines/                           # GAR-FID evaluation pipelines
+  train_decoder_adaptation.py           # Decoder-adaptation training
+  models/                              # Tokenizer, iMF, and loss implementations
   data/, metric/, utils/                # Shared runtime utilities
 third_party/ifid/                       # Minimal iFID/SiT runtime
 requirements.txt                       # PyTorch runtime dependencies
@@ -166,7 +170,7 @@ pip install -r third_party/ifid/requirements.txt
 export PYTHONPATH=src:third_party/ifid:${PYTHONPATH:-}
 ```
 
-Stage 3 runs in PyTorch. JAX/Flax is only needed for optional conversion of legacy checkpoints, using `requirements-jax-conversion.txt` and [`scripts/stage3_convert_imf_checkpoint.sh`](scripts/stage3_convert_imf_checkpoint.sh).
+decoder adaptation runs in PyTorch. JAX/Flax is only needed for optional conversion of legacy checkpoints, using `requirements-jax-conversion.txt` and [`scripts/convert_imf_checkpoint.sh`](scripts/convert_imf_checkpoint.sh).
 
 ### Checkpoints
 
@@ -183,14 +187,14 @@ export IMF_CKPT=/path/to/iMF-B-2.pt
 export DECODER_CKPT=/path/to/decoder_adapted_checkpoint.pth.tar
 ```
 
-For Stage 2, download the SiT/iFID assets listed in the [checkpoint registry](assets/sit_checkpoint_registry_template.csv):
+For GAR-FID evaluation, download the SiT/iFID assets listed in the [checkpoint registry](assets/sit_checkpoint_registry_template.csv) to `assets/sit/`:
 
 ```bash
 # Download the SD-VAE / SiT-B example used below.
-bash scripts/stage2_download_ifid_assets.sh --group_ids sdvae_b
+bash scripts/download_sit_checkpoints.sh --group_ids sdvae_b
 
 # Or download all registry entries marked for execution.
-bash scripts/stage2_download_ifid_assets.sh --only_should_run
+bash scripts/download_sit_checkpoints.sh --only_should_run
 ```
 
 ### Data and evaluation assets
@@ -223,11 +227,11 @@ Run GAR-FID on the SD-VAE / SiT-B checkpoint at a single noise level:
 
 ```bash
 ETA_T=0.8 NUM_SAMPLES=50000 BATCH_SIZE=16 SAVE_NPZ=1 \
-bash scripts/stage2_run_sit_garfid.sh \
+bash scripts/evaluate_garfid.sh \
   sdvae_b \
   "${IMAGENET_VAL}" \
   "${FID_REFERENCE_FILE}" \
-  results/stage2_sit_garfid/sdvae_b_eta08
+  results/garfid/sdvae_b_eta08
 ```
 
 For a small runtime check, set `NUM_SAMPLES=8` and `BATCH_SIZE=2`; use the full evaluation sample count for reported metrics. To evaluate the trajectory:
@@ -235,14 +239,14 @@ For a small runtime check, set `NUM_SAMPLES=8` and `BATCH_SIZE=2`; use the full 
 ```bash
 ETA_LIST="0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0" \
 NUM_SAMPLES=50000 BATCH_SIZE=16 SAVE_NPZ=1 \
-bash scripts/stage2_run_sit_garfid_sweep.sh \
+bash scripts/evaluate_garfid_sweep.sh \
   sdvae_b \
   "${IMAGENET_VAL}" \
   "${FID_REFERENCE_FILE}" \
-  results/stage2_sit_garfid/sdvae_b
+  results/garfid/sdvae_b
 ```
 
-Use the registry to select other checkpoint groups. [`scripts/stage2_compute_correlations.sh`](scripts/stage2_compute_correlations.sh) computes Pearson and Spearman correlations from a collected results CSV.
+Use the registry to select other checkpoint groups. [`scripts/compute_correlations.sh`](scripts/compute_correlations.sh) computes Pearson and Spearman correlations from a collected results CSV.
 
 ### Decoder adaptation
 
@@ -251,7 +255,7 @@ The following command runs the **10-epoch DA w/o CFG** setting with a frozen iMF
 ```bash
 NPROC_PER_NODE=8 EPOCHS=10 BATCH_SIZE=32 NUM_WORKERS=8 \
 EXTRA_ARGS="--model_type iMF-B-2 --minimum_noise_level 0.25 --maximum_noise_level 0.45" \
-bash scripts/stage3_train_decoder_adaptation.sh \
+bash scripts/train_decoder_adaptation.sh \
   "${IMAGENET_ROOT}" \
   "${IMF_CKPT}" \
   results/decoder_adaptation_imf_b2_noise025045
@@ -275,7 +279,7 @@ Keep the PyTorch environment active for `torchrun`; `PYTHON` below selects the s
 NPROC_PER_NODE=8 NUM_SAMPLES=50000 BATCH_SIZE=32 \
 CFG_OMEGA=8.0 CFG_T_MIN=0.40 CFG_T_MAX=0.65 \
 PYTHON="${PWD}/.venv-fid/bin/python" \
-bash scripts/stage3_evaluate_posttrained_decoder.sh \
+bash scripts/evaluate_decoder.sh \
   iMF-B-2 \
   "${IMF_CKPT}" \
   "${DECODER_CKPT}" \
@@ -292,6 +296,13 @@ This example evaluates generation with CFG. Use the model-specific guidance sett
 - **Decoder adaptation:** the output root contains `checkpoints/`, `results/`, `saver/`, and `resolved_configs/`.
 - **Generation evaluation:** outputs include `Generated_CFG_iMF-B-2.npz` and `fid_results_openai.json` for the B/2 example above.
 - **Reproducibility:** launch recipes are available under [`scripts/`](scripts/). Update local dataset, checkpoint, statistics, and output paths before execution.
+
+The iMF evaluation scripts use `vanilla_rfid` for standard reconstruction,
+`garfid_nocfg` / `garfid_cfg` for GAR, and `gfid_nocfg` / `gfid_cfg` for generation.
+CFG in a GAR mode controls GAR construction; CFG in a generation mode controls generation.
+These evaluation modes do not enable CFG during decoder-adaptation training.
+
+For existing installations and older commands, see the [entrypoint migration guide](docs/entrypoint_migration.md).
 
 ## Citation
 

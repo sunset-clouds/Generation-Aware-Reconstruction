@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from pipelines.sit_stage2_common import (
+from pipelines.sit_common import (
     DEFAULT_IFID_REPO_ROOT,
     load_registry_rows,
     make_output_root,
@@ -111,8 +111,8 @@ def _collect_alignment_notes(
             notes.append("The adapter summary was produced with CFG enabled; compare it only to registry `expected_gfid_w_cfg` values.")
         else:
             notes.append("The adapter summary was produced without CFG; compare it only to registry `expected_gfid_wo_cfg` values.")
-    notes.append("Canonical Stage 2 report alignment should use the IFID-style gFID reference `VIRTUAL_imagenet256_labeled.npz` rather than the iMF `jit_in256_stats` or TPU/JAX stats.")
-    notes.append("Registry `expected_ifid` and `expected_gfid_*` should be treated as paper-report baselines; `rFID` currently has no official baseline column and must be tracked as an internal Stage 2 metric.")
+    notes.append("Canonical GAR-FID evaluation report alignment should use the IFID-style gFID reference `VIRTUAL_imagenet256_labeled.npz` rather than the iMF `jit_in256_stats` or TPU/JAX stats.")
+    notes.append("Registry `expected_ifid` and `expected_gfid_*` should be treated as paper-report baselines; `rFID` currently has no official baseline column and must be tracked as an internal GAR-FID evaluation metric.")
     return notes
 
 
@@ -182,7 +182,7 @@ def _render_markdown(report: Dict[str, Any]) -> str:
     adapter = report.get("adapter_summary", {})
     commands = report["recommended_commands"]
     lines = [
-        "# Stage2 Baseline Alignment",
+        "# GAR-FID Baseline Alignment",
         "",
         f"## Group",
         f"- `group_id`: `{report['group_id']}`",
@@ -196,8 +196,8 @@ def _render_markdown(report: Dict[str, Any]) -> str:
         "",
         "## Canonical Policy",
         "- Official report alignment uses IFID-style `generate.py` and `VIRTUAL_imagenet256_labeled.npz`.",
-        "- `rFID` is treated as an internal Stage 2 baseline unless a paper-side report value is explicitly added to the registry.",
-        "- `torch-fidelity + jit_in256_stats.npz` is useful for iMF comparisons, but not the canonical Stage 2 SiT baseline in this workflow.",
+        "- `rFID` is treated as an internal GAR-FID evaluation baseline unless a paper-side report value is explicitly added to the registry.",
+        "- `torch-fidelity + jit_in256_stats.npz` is useful for iMF comparisons, but not the canonical GAR-FID evaluation SiT baseline in this workflow.",
         "",
         "## Expected Metrics",
         f"- `expected_ifid`: {_format_float(expected['expected_ifid'])}",
@@ -328,7 +328,7 @@ def main() -> None:
         "recommended_commands": commands,
     }
 
-    output_dir = Path(args.output_dir or make_output_root("stage2_baseline_alignment")).resolve()
+    output_dir = Path(args.output_dir or make_output_root("sit_baseline_alignment")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     output_json = output_dir / f"{args.group_id}_baseline_alignment.json"
     output_md = output_dir / f"{args.group_id}_baseline_alignment.md"
@@ -337,7 +337,7 @@ def main() -> None:
     output_md.write_text(_render_markdown(report))
 
     print("=" * 72)
-    print("Stage2 baseline alignment report written")
+    print("GAR-FID baseline alignment report written")
     print(f"group_id      : {args.group_id}")
     print(f"output_json   : {output_json}")
     print(f"output_md     : {output_md}")

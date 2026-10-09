@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Mapping, Optional
 
 import torch
+from asset_paths import resolve_sit_asset_path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -100,7 +101,7 @@ class SitCheckpointSpec:
             sit_scale=str(row_dict.get("sit_scale", "")).strip(),
             sit_model=str(row_dict.get("sit_model", "")).strip(),
             ifid_exp_name=str(row_dict.get("ifid_exp_name", "")).strip(),
-            exp_path=str(row_dict.get("exp_path", "")).strip(),
+            exp_path=resolve_sit_asset_path(str(row_dict.get("exp_path", "")).strip()),
             args_json=_clean_optional(row_dict.get("args_json")),
             ckpt_step=int(ckpt_step) if ckpt_step not in (None, "") else None,
             ckpt_file=_clean_optional(row_dict.get("ckpt_file")),

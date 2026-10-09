@@ -32,8 +32,8 @@ def test_jax_is_confined_to_checkpoint_conversion():
     assert not offenders, offenders
 
 
-def test_stage3_uses_canonical_loss_module():
-    source = (SRC / "post_train.py").read_text(encoding="utf-8")
+def test_decoder_adaptation_uses_canonical_loss_module():
+    source = (SRC / "train_decoder_adaptation.py").read_text(encoding="utf-8")
     assert "from models.losses import PostTrainingLoss" in source
     assert not (SRC / "models" / "loss.py").exists()
 
@@ -42,7 +42,7 @@ def test_nocfg_reconstruction_emits_one_batch():
     source = (SRC / "scripts" / "generate_eval_images.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     for node in ast.walk(tree):
-        if isinstance(node, ast.If) and "mode == 'our_rfid_nocfg'" in ast.unparse(node.test):
+        if isinstance(node, ast.If) and "mode == 'garfid_nocfg'" in ast.unparse(node.test):
             appends = [
                 child
                 for statement in node.body
@@ -54,11 +54,11 @@ def test_nocfg_reconstruction_emits_one_batch():
             ]
             assert len(appends) == 1
             return
-    raise AssertionError("our_rfid_nocfg branch not found")
+    raise AssertionError("garfid_nocfg branch not found")
 
 
 if __name__ == "__main__":
     test_jax_is_confined_to_checkpoint_conversion()
-    test_stage3_uses_canonical_loss_module()
+    test_decoder_adaptation_uses_canonical_loss_module()
     test_nocfg_reconstruction_emits_one_batch()
     print("runtime contract ok")

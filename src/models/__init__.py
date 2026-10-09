@@ -1,5 +1,5 @@
 """
-Models for iMF-GAP.
+Models for generation-aware reconstruction and decoder adaptation.
 
 Structure follows the GAR-FID training convention:
 - diffusion_pytorch.py / imf_official.py: frozen iMF wrappers

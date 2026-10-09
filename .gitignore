@@ -25,6 +25,7 @@ slurm-*.out
 # Local assets, datasets, and checkpoints
 assets/checkpoints/
 assets/generated/
+assets/sit/
 assets/stage2_assets/
 checkpoints/
 /data/

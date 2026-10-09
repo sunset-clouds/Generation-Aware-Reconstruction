@@ -6,8 +6,8 @@ Legacy options: ``--label_mode image_order`` or ``random`` (not recommended).
 
 Supports three reconstruction modes:
   - vanilla_rfid:   x -> Encoder -> Decoder
-  - our_rfid_nocfg: x -> Encoder -> add_noise(t) -> iMF denoise(no CFG) -> Decoder
-  - our_rfid_cfg:   x -> Encoder -> add_noise(t) -> iMF denoise(CFG) -> Decoder
+  - garfid_nocfg: x -> Encoder -> add_noise(t) -> iMF denoise(no CFG) -> Decoder
+  - garfid_cfg:   x -> Encoder -> add_noise(t) -> iMF denoise(CFG) -> Decoder
 
 Outputs:
   - reconstruction_metrics.csv
@@ -20,7 +20,7 @@ Example:
     --pretrained_imf_pytorch checkpoints/pytorch/iMF-B-2.pth \
     --dataset_dir /path/to/imagenet/val \
     --output_dir ./results/recon_metrics/imf-b-2 \
-    --modes vanilla_rfid,our_rfid_nocfg \
+    --modes vanilla_rfid,garfid_nocfg \
     --noise_levels 0.2 \
     --save_npz
 """
@@ -42,12 +42,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from metric.metric import LPIPS, PSNR, SSIM
 from models.model import TokenizerFlowComposition
-from scripts.generate_eval_images import save_npz, to_uint8
+from scripts.generate_eval_images import LEGACY_MODE_ALIASES, save_npz, to_uint8
 from scripts.imagenet_dir_label_map import DEFAULT_LABEL_MAP_JSON
 from scripts.imagenet_val_labeled_dataset import PairedImageNetDataset
 
 
-ALL_MODES = ("vanilla_rfid", "our_rfid_nocfg", "our_rfid_cfg")
+ALL_MODES = ("vanilla_rfid", "garfid_nocfg", "garfid_cfg")
 
 
 def build_model(args, device: torch.device):
@@ -105,7 +105,7 @@ def reconstruct_batch(
         noise_level,
         labels,
         num_steps=1,
-        use_cfg=(mode == "our_rfid_cfg"),
+        use_cfg=(mode == "garfid_cfg"),
     )
     return model_u.decode_latent(z_den)
 
@@ -185,7 +185,7 @@ def evaluate_mode(
         if mode == "vanilla_rfid":
             fname = "VAE_reconstruction.npz"
         else:
-            cfg_tag = "CFG" if mode == "our_rfid_cfg" else "noCFG"
+            cfg_tag = "CFG" if mode == "garfid_cfg" else "noCFG"
             fname = f"Denoising_t{noise_level}_{cfg_tag}_{model_type}.npz"
         save_npz(np.concatenate(output_images, axis=0), os.path.join(output_dir, fname))
 
@@ -220,8 +220,8 @@ def main():
     parser.add_argument(
         "--modes",
         type=str,
-        default="vanilla_rfid,our_rfid_nocfg",
-        help="Comma-separated from: vanilla_rfid,our_rfid_nocfg,our_rfid_cfg",
+        default="vanilla_rfid,garfid_nocfg",
+        help="Comma-separated from: vanilla_rfid,garfid_nocfg,garfid_cfg",
     )
     parser.add_argument(
         "--noise_levels",
@@ -246,7 +246,8 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    modes = [m.strip() for m in args.modes.split(",") if m.strip()]
+    modes = [LEGACY_MODE_ALIASES.get(m.strip(), m.strip())
+             for m in args.modes.split(",") if m.strip()]
     for mode in modes:
         if mode not in ALL_MODES:
             raise ValueError(f"Unknown mode {mode!r}. Choices: {ALL_MODES}")

@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from pipelines.sit_stage2_common import (
+from pipelines.sit_common import (
     DEFAULT_IFID_REPO_ROOT,
     filter_rows,
     load_registry_rows,
@@ -21,7 +21,7 @@ from pipelines.sit_stage2_common import (
     missing_ifid_runtime_files,
     path_exists,
     resolve_reference_path,
-    resolve_stage2_vae_config_path,
+    resolve_sit_vae_config_path,
     resolve_user_path,
     summarize_check_status,
 )
@@ -52,7 +52,7 @@ BASELINE_FIELDS = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Audit Stage 2 SiT registry completeness and on-disk assets."
+        description="Audit GAR-FID evaluation SiT registry completeness and on-disk assets."
     )
     parser.add_argument("--registry_path", type=str, default=None)
     parser.add_argument("--ifid_repo_root", type=str, default=str(DEFAULT_IFID_REPO_ROOT))
@@ -89,7 +89,7 @@ def _append_missing_if_blank(target: List[str], row: Dict[str, str], field_names
 
 def _render_markdown(summary: Dict[str, object], rows: List[Dict[str, object]]) -> str:
     lines = [
-        "# Stage2 Registry Audit",
+        "# GAR-FID Registry Audit",
         "",
         f"- `registry_path`: `{summary['registry_path']}`",
         f"- `ifid_repo_root`: `{summary['ifid_repo_root']}`",
@@ -140,7 +140,7 @@ def main() -> None:
         vae_config_value = str(row.get("vae_config", "")).strip()
         resolved_vae_config = ""
         if vae_config_value:
-            resolved_vae_config = resolve_stage2_vae_config_path(
+            resolved_vae_config = resolve_sit_vae_config_path(
                 vae_config_value,
                 ifid_repo_root=ifid_repo_root,
                 exp_path=resolved_exp_path,
@@ -236,7 +236,7 @@ def main() -> None:
                 missing_expected_group_ids.append(f"{family}_{expected_scale}")
     summary["missing_expected_group_ids"] = missing_expected_group_ids
 
-    output_dir = Path(args.output_dir or make_output_root("stage2_registry_audit")).resolve()
+    output_dir = Path(args.output_dir or make_output_root("sit_registry_audit")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / "registry_audit.json"
     csv_path = output_dir / "registry_audit.csv"
@@ -273,7 +273,7 @@ def main() -> None:
     md_path.write_text(_render_markdown(summary, audited_rows))
 
     print("=" * 72)
-    print("Stage2 registry audit written")
+    print("GAR-FID registry audit written")
     print(f"rows_scanned   : {summary['rows_scanned']}")
     print(f"ready_rows     : {summary['ready_rows']}")
     print(f"output_json    : {json_path}")

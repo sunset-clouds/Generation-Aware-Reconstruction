@@ -38,7 +38,7 @@ class TokenizerFlowComposition(nn.Module):
     - Tokenizer (VAE): encoder (frozen) + decoder (trainable)
     - DiffusionModel (iMF): frozen, used for denoising
     
-    Stage 3 uses only PyTorch iMF checkpoints. JAX support is isolated in the
+    Decoder adaptation uses only PyTorch iMF checkpoints. JAX support is isolated in the
     offline checkpoint conversion tool.
     """
     
@@ -66,7 +66,7 @@ class TokenizerFlowComposition(nn.Module):
         else:
             ckpt_path = getattr(args, 'pretrained_imf_pytorch', '')
             if not ckpt_path:
-                raise ValueError("pretrained_imf_pytorch is required for Stage 3")
+                raise ValueError("pretrained_imf_pytorch is required for decoder adaptation")
             use_official = ckpt_path.endswith('.pth')
             if use_official:
                 from models.imf_official import OfficialImfWrapper
@@ -123,7 +123,7 @@ class TokenizerFlowComposition(nn.Module):
         return self.tokenizer.decode(z).clamp(-1, 1)
     
     # ============================================================
-    # Pipeline 1: Vanilla VAE Reconstruction (for rFID baseline)
+    # Standard reconstruction (rFID baseline)
     # x → Encoder → z_real → Decoder → x_rec
     # ============================================================
     def vae_reconstruction(self, x):
@@ -137,12 +137,12 @@ class TokenizerFlowComposition(nn.Module):
         return x_rec
     
     # ============================================================
-    # Pipeline 4: Our Proposed Reconstruction (for training)
+    # Generation-aware reconstruction (GAR) for decoder adaptation
     # x → Encoder → z_real → add_noise(t) → z_noisy → iMF → z_denoised → Decoder → x_rec
     # ============================================================
     def vae_imf_reconstruction(self, x, labels=None, use_cfg=False):
         """
-        Our proposed reconstruction pipeline for training.
+        Generation-aware reconstruction pipeline for decoder adaptation.
         
         Args:
             x: Input images, shape (B, 3, H, W) in range [-1, 1]

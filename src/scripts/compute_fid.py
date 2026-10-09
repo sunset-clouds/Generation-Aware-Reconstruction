@@ -79,7 +79,7 @@ def discover_npz_files(npz_dir, model_type):
     if os.path.exists(nocfg_npz):
         found['gfid_nocfg'] = nocfg_npz
 
-    # Denoising rFID (pattern: Denoising_t{t}_{noCFG|CFG}_{model}.npz)
+    # GAR-FID (legacy sample pattern: Denoising_t{t}_{noCFG|CFG}_{model}.npz)
     denoise_pattern = os.path.join(npz_dir, f'Denoising_t*_*_{model_type}.npz')
     for path in sorted(glob.glob(denoise_pattern)):
         basename = os.path.basename(path)
@@ -90,7 +90,7 @@ def discover_npz_files(npz_dir, model_type):
         if match:
             t_val = match.group(1)
             cfg_tag = match.group(2)
-            key = f'our_rfid_{"nocfg" if cfg_tag == "noCFG" else "cfg"}_t{t_val}'
+            key = f'garfid_{"nocfg" if cfg_tag == "noCFG" else "cfg"}_t{t_val}'
             found[key] = path
 
     return found
@@ -168,12 +168,12 @@ def print_summary_table(results, evaluator_name):
             print(f"  {label:<33} {r['fid']:>10.4f} {r['is']:>10.2f}")
             printed.add(key)
 
-    # Denoising rFID entries
+    # GAR-FID entries
     for key in sorted(results.keys()):
         if key not in printed:
             r = results[key]
-            label = key.replace('our_rfid_nocfg_', 'Our rFID (no CFG) ').replace(
-                'our_rfid_cfg_', 'Our rFID (CFG) ')
+            label = key.replace('garfid_nocfg_', 'GAR-FID (no CFG) ').replace(
+                'garfid_cfg_', 'GAR-FID (CFG) ')
             print(f"  {label:<33} {r['fid']:>10.4f} {r['is']:>10.2f}")
 
     print("=" * 70)
@@ -232,7 +232,7 @@ def main():
         gfid_npz = {k: v for k, v in npz_files.items()
                     if k.startswith('gfid')}
         rfid_npz = {k: v for k, v in npz_files.items()
-                    if k in ('vanilla_rfid',) or k.startswith('our_rfid')}
+                    if k in ('vanilla_rfid',) or k.startswith('garfid')}
 
         openai_results = {}
 
@@ -266,7 +266,7 @@ def main():
         gfid_npz = {k: v for k, v in npz_files.items()
                     if k.startswith('gfid')}
         rfid_npz = {k: v for k, v in npz_files.items()
-                    if k in ('vanilla_rfid',) or k.startswith('our_rfid')}
+                    if k in ('vanilla_rfid',) or k.startswith('garfid')}
 
         tf_results = {}
 
