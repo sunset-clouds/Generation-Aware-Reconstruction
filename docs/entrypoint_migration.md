@@ -6,8 +6,9 @@ not consecutive training stages.
 
 ## Commands
 
-Run the commands from the repository root. The old entrypoints forward arguments to
-the new ones; the Slurm compatibility scripts retain their scheduler directives.
+Run the commands from the repository root. The old forwarding entrypoints have
+been removed; use the replacements below. The canonical Slurm templates retain
+their scheduler directives.
 
 | Previous entrypoint | Current entrypoint |
 | --- | --- |
@@ -23,8 +24,8 @@ the new ones; the Slurm compatibility scripts retain their scheduler directives.
 | `scripts/generated/sbatch_stage3_smoke_server.sh` | `scripts/generated/sbatch_decoder_adaptation_smoke_server.sh` |
 | `src/post_train.py` | `src/train_decoder_adaptation.py` |
 
-Python imports from `pipelines.sit_stage2_common` also remain available through a
-compatibility module; new code uses `pipelines.sit_common`.
+Python imports should use `pipelines.sit_common`; the previous
+`pipelines.sit_stage2_common` compatibility module has been removed.
 
 ## Evaluation modes and results
 

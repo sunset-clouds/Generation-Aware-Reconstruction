@@ -5,7 +5,11 @@ import re
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OFFICIAL_CLASS_INDEX_JSON = os.path.join(SCRIPT_DIR, "imagenet_class_index.json")
-DEFAULT_LABEL_MAP_JSON = os.path.join(SCRIPT_DIR, "imagenet_val_dir_to_index.json")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+DEFAULT_LABEL_MAP_JSON = os.environ.get(
+    "LABEL_MAP_JSON",
+    os.path.join(PROJECT_ROOT, "assets", "generated", "imagenet_val_dir_to_index.json"),
+)
 
 # These names are known collisions in human-readable ImageNet folder dumps.
 # We pin them explicitly so the generated label map is exact and stable.

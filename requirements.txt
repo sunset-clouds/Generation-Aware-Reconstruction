@@ -1,7 +1,6 @@
 # Install a CUDA-compatible torch and torchvision build first when needed.
 diffusers==0.36.0
 huggingface-hub>=0.36,<2
-kornia>=0.7
 numpy>=1.26,<3
 opencv-python-headless
 pandas>=2,<3

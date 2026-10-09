@@ -358,4 +358,4 @@ If this work is useful for your research, please cite:
 
 ## Acknowledgements
 
-This work builds on iMF, SiT, iFID, and SD-VAE. We thank their authors and the contributors to the perceptual-metric and evaluation libraries used in this repository. The bundled iFID/SiT runtime is located in [`third_party/ifid/`](third_party/ifid/); see [Third-Party Notices](THIRD_PARTY_NOTICES.md).
+This work builds on iMF, SiT, iFID, and SD-VAE. We thank their authors and the contributors to the perceptual-metric and evaluation libraries used in this repository. The bundled iFID/SiT runtime is located in [`third_party/ifid/`](third_party/ifid/). Copyright and license headers are retained in the bundled source files. External pretrained models, datasets, and FID statistics must be obtained separately.

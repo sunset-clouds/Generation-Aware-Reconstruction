@@ -212,7 +212,7 @@ def main():
         "--label_map_json",
         type=str,
         default=DEFAULT_LABEL_MAP_JSON,
-        help="Exact val folder -> class index JSON (default: scripts/imagenet_val_dir_to_index.json).",
+        help="Exact val folder -> class index JSON (default: assets/generated/imagenet_val_dir_to_index.json).",
     )
     parser.add_argument("--output_dir", type=str, default="./results/reconstruction_metrics")
     parser.add_argument("--num_samples", type=int, default=50000)

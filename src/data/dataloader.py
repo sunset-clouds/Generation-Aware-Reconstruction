@@ -18,15 +18,11 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import InterpolationMode, transforms
 from .augmentation import random_crop_arr, center_crop_arr
-from .lsun_church import LSUNChurchesDataset
-from .lsun_bedroom import LSUNBedroomsDataset
 
 DATASET_PATHS = {
     "ImageNet": "imagenet",
     "FFHQ": "FFHQ",
     "CelebAHQ": "CelebAHQ",
-    "Churches": "LSUN-Churches",
-    "Bedrooms":"LSUN-Bedrooms",
 }
 
 def build_train_transform(resolution=256):
